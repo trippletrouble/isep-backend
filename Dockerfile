@@ -17,7 +17,7 @@ ENV POSTGRES_URL=$POSTGRES_URL
 
 RUN npx prisma generate
 
-RUN npm run build || (echo "Build failed" && exit 1)
+RUN npm run build
 
 FROM node:25-alpine
 
