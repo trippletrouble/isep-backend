@@ -4,7 +4,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
 
-describe('AppController (e2e)', () => {
+describe('GameController (e2e)', () => {
   let app: INestApplication<App>;
 
   beforeEach(async () => {
@@ -16,10 +16,22 @@ describe('AppController (e2e)', () => {
     await app.init();
   });
 
-  it('/ (GET)', () => {
-    return request(app.getHttpServer())
-      .get('/')
-      .expect(200)
-      .expect('Hello World!');
+  afterEach(async () => {
+    await app.close();
+  });
+
+  it('/games (POST) - should create a game', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/games')
+      .expect(201);
+
+    expect(res.body).toHaveProperty('id');
+    expect(res.body.status).toBe('WAITING');
+  });
+
+  it('/games/:id (GET) - should return 404 for unknown game', async () => {
+    await request(app.getHttpServer())
+      .get('/games/non-existent-id')
+      .expect(404);
   });
 });

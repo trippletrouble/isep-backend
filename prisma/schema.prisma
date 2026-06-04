@@ -1,23 +1,21 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
-  provider     = "prisma-client"
-  output       = "../src/generated/prisma-client"
-  moduleFormat = "cjs"
+  provider = "prisma-client-js"
 }
 
 generator prismaClassGenerator {
-  provider               = "prisma-class-generator"
-  output                 = "../src/generated/prisma-class"
-  useSwagger             = true
-  useClassValidator      = true
-  dryRun                 = false
-  separateRelationFields = true
+  provider                = "prisma-class-generator"
+  output                  = "../src/generated/prisma-class"
+  useSwagger              = true
+  useClassValidator       = true
+  dryRun                  = false
+  separateRelationFields  = true
+  usePrismaJsonValue      = true
+  clientImportPath        = "../prisma-client/enums"
+  preserveDefaultNullable = true
 }
 
 datasource db {
   provider = "postgresql"
 }
+
+// Models will be defined in the DB-schema issue.
