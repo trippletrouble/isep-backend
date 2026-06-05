@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../src/generated/prisma-client"
 }
 
 generator prismaClassGenerator {
@@ -10,7 +11,7 @@ generator prismaClassGenerator {
   dryRun                  = false
   separateRelationFields  = true
   usePrismaJsonValue      = true
-  clientImportPath        = "../prisma-client/enums"
+  clientImportPath        = "../prisma-client"
   preserveDefaultNullable = true
 }
 
@@ -18,4 +19,181 @@ datasource db {
   provider = "postgresql"
 }
 
-// Models will be defined in the DB-schema issue.
+enum GameStatus {
+  WAITING
+  IN_PROGRESS
+  FINISHED
+}
+
+enum PlayerColor {
+  RED
+  BLUE
+  GREEN
+  YELLOW
+}
+
+enum PieceStatus {
+  HOME
+  ACTIVE
+  GOAL
+}
+
+enum PlayerType {
+  HUMAN
+}
+
+enum GameMode {
+  CLASSIC
+}
+
+enum BoardTheme {
+  CLASSIC
+}
+
+enum AdditionalRule {
+  THROW_AGAIN_ON_6
+  THREE_SIXES_LOSE_TURN
+}
+
+enum MoveOutcome {
+  MOVED
+  CAPTURED
+  GOAL
+  GAME_WON
+}
+
+enum GameHistoryActionType {
+  ROLL
+  MOVE
+  CAPTURE
+  GOAL
+  GAME_START
+  GAME_END
+}
+
+enum ThemePreference {
+  LIGHT
+  DARK
+  SYSTEM
+}
+
+model User {
+  id                   String          @id @default(uuid()) @db.Uuid
+  keycloakSub          String          @unique @map("keycloak_sub")
+  username             String          @unique
+  avatarUrl            String?         @map("avatar_url")
+  isGuest              Boolean         @default(false) @map("is_guest")
+  themePreference      ThemePreference @default(SYSTEM) @map("theme_preference")
+  gamesPlayed          Int             @default(0) @map("games_played")
+  gamesWon             Int             @default(0) @map("games_won")
+  gamesLost            Int             @default(0) @map("games_lost")
+  totalFiguresCaptured Int             @default(0) @map("total_figures_captured")
+  createdAt            DateTime        @default(now()) @map("created_at")
+  updatedAt            DateTime        @updatedAt @map("updated_at")
+  deletedAt            DateTime?       @map("deleted_at")
+
+  hostedSessions   Session[]         @relation("SessionHost")
+  gameParticipants GameParticipant[]
+
+  @@map("users")
+}
+
+model Session {
+  id                   String           @id @default(uuid()) @db.Uuid
+  status               GameStatus       @default(WAITING)
+  mode                 GameMode         @default(CLASSIC)
+  boardTheme           BoardTheme       @default(CLASSIC) @map("board_theme")
+  numberOfPlayers      Int              @default(4) @map("number_of_players")
+  isPrivate            Boolean          @default(false) @map("is_private")
+  inviteToken          String?          @unique @map("invite_token")
+  turnTimeLimitSeconds Int?             @map("turn_time_limit_seconds")
+  additionalRules      AdditionalRule[] @map("additional_rules")
+  hostId               String           @map("host_id") @db.Uuid
+  currentPlayerId      String?          @map("current_player_id") @db.Uuid
+  turnNumber           Int              @default(0) @map("turn_number")
+  lastDiceValue        Int?             @map("last_dice_value")
+  diceRolledThisTurn   Boolean          @default(false) @map("dice_rolled_this_turn")
+  consecutiveSixes     Int              @default(0) @map("consecutive_sixes")
+  winnerId             String?          @map("winner_id") @db.Uuid
+  replayLogRef         String?          @map("replay_log_ref")
+  startedAt            DateTime?        @map("started_at")
+  finishedAt           DateTime?        @map("finished_at")
+  durationSeconds      Int?             @map("duration_seconds")
+  createdAt            DateTime         @default(now()) @map("created_at")
+  updatedAt            DateTime         @updatedAt @map("updated_at")
+
+  host          User               @relation("SessionHost", fields: [hostId], references: [id])
+  participants  GameParticipant[]
+  figures       Figure[]
+  historyEvents GameHistoryEvent[]
+
+  @@index([status])
+  @@index([hostId])
+  @@index([status, isPrivate])
+  @@map("sessions")
+}
+
+model GameParticipant {
+  id              String      @id @default(uuid()) @db.Uuid
+  sessionId       String      @map("session_id") @db.Uuid
+  userId          String      @map("user_id") @db.Uuid
+  color           PlayerColor
+  type            PlayerType  @default(HUMAN)
+  isBot           Boolean     @default(false) @map("is_bot")
+  isCurrentTurn   Boolean     @default(false) @map("is_current_turn")
+  hasFinished     Boolean     @default(false) @map("has_finished")
+  figuresInGoal   Int         @default(0) @map("figures_in_goal")
+  placement       Int?
+  figuresCaptured Int         @default(0) @map("figures_captured")
+  joinedAt        DateTime    @default(now()) @map("joined_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+
+  session       Session            @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user          User               @relation(fields: [userId], references: [id])
+  figures       Figure[]
+  historyEvents GameHistoryEvent[]
+
+  @@unique([sessionId, userId])
+  @@unique([sessionId, color])
+  @@index([sessionId])
+  @@index([userId])
+  @@map("game_participants")
+}
+
+model Figure {
+  id            Int         @id @default(autoincrement())
+  sessionId     String      @map("session_id") @db.Uuid
+  participantId String      @map("participant_id") @db.Uuid
+  position      Int         @default(-1)
+  status        PieceStatus @default(HOME)
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  session     Session         @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  participant GameParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+
+  @@id([sessionId, id])
+  @@index([participantId])
+  @@map("figures")
+}
+
+model GameHistoryEvent {
+  id            Int                   @id @default(autoincrement())
+  sequenceNr    Int                   @map("sequence_nr")
+  sessionId     String                @map("session_id") @db.Uuid
+  participantId String                @map("participant_id") @db.Uuid
+  actionType    GameHistoryActionType @map("action_type")
+  diceValue     Int?                  @map("dice_value")
+  figureId      Int?                  @map("figure_id")
+  fromPosition  Int?                  @map("from_position")
+  toPosition    Int?                  @map("to_position")
+  outcome       MoveOutcome?
+  createdAt     DateTime              @default(now()) @map("created_at")
+
+  session     Session         @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  participant GameParticipant @relation(fields: [participantId], references: [id])
+
+  @@unique([sessionId, sequenceNr])
+  @@index([sessionId, createdAt])
+  @@index([participantId])
+  @@map("game_history_events")
+}
