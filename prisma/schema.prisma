@@ -161,7 +161,7 @@ model GameParticipant {
 }
 
 model Figure {
-  id            Int         @id @default(autoincrement())
+  id            Int         @default(autoincrement())
   sessionId     String      @map("session_id") @db.Uuid
   participantId String      @map("participant_id") @db.Uuid
   position      Int         @default(-1)
