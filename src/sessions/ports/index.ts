@@ -1,1 +1,1 @@
-export * from './session-repository.port';
+export * from './session.repository.port';

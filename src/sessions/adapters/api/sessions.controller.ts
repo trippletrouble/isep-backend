@@ -37,7 +37,7 @@ export class SessionsController {
   async createSession(
     @Body() request: CreateSessionRequestDto,
     @CurrentUser() user: User,
-  ): Promise<LobbyDto> {
+  ) {
     return this.createSessionUseCase.execute(user.id, request.settings);
   }
   @Post(':id/start')

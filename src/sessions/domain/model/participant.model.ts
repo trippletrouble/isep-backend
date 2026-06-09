@@ -1,6 +1,11 @@
 export type PlayerColor = 'RED' | 'BLUE' | 'GREEN' | 'YELLOW';
 export type PlayerType = 'HUMAN';
-export const ALL_PLAYER_COLORS: PlayerColor[] = ['RED', 'BLUE', 'GREEN', 'YELLOW'];
+export const ALL_PLAYER_COLORS: PlayerColor[] = [
+  'RED',
+  'BLUE',
+  'GREEN',
+  'YELLOW',
+];
 export class GameParticipant {
   constructor(
     public readonly id: string,
