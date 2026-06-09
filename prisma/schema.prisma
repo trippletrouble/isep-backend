@@ -23,69 +23,6 @@ datasource db {
   provider = "postgresql"
 }
 
-enum GameStatus {
-  WAITING
-  IN_PROGRESS
-  FINISHED
-}
-
-enum PlayerColor {
-  RED
-  BLUE
-  GREEN
-  YELLOW
-}
-
-enum PieceStatus {
-  HOME
-  ACTIVE
-  GOAL
-}
-
-enum PlayerType {
-  HUMAN
-}
-
-enum GameMode {
-  CLASSIC
-}
-
-enum BoardTheme {
-  CLASSIC
-}
-
-enum AdditionalRule {
-  THROW_AGAIN_ON_6
-  THREE_SIXES_LOSE_TURN
-}
-
-enum MoveOutcome {
-  MOVED
-  CAPTURED
-  GOAL
-  GAME_WON
-}
-
-enum GameHistoryActionType {
-  ROLL
-  MOVE
-  CAPTURE
-  GOAL
-  GAME_START
-  GAME_END
-}
-
-enum ThemePreference {
-  LIGHT
-  DARK
-  SYSTEM
-}
-
-enum UserRole {
-  PLAYER
-  ADMIN
-}
-
 model User {
   id                   String          @id @default(uuid()) @db.Uuid
   keycloakSub          String          @unique @map("keycloak_sub")
@@ -206,4 +143,67 @@ model GameHistoryEvent {
   @@index([sessionId, createdAt])
   @@index([participantId])
   @@map("game_history_events")
+}
+
+enum GameStatus {
+  WAITING
+  IN_PROGRESS
+  FINISHED
+}
+
+enum PlayerColor {
+  RED
+  BLUE
+  GREEN
+  YELLOW
+}
+
+enum PieceStatus {
+  HOME
+  ACTIVE
+  GOAL
+}
+
+enum PlayerType {
+  HUMAN
+}
+
+enum GameMode {
+  CLASSIC
+}
+
+enum BoardTheme {
+  CLASSIC
+}
+
+enum AdditionalRule {
+  THROW_AGAIN_ON_6
+  THREE_SIXES_LOSE_TURN
+}
+
+enum MoveOutcome {
+  MOVED
+  CAPTURED
+  GOAL
+  GAME_WON
+}
+
+enum GameHistoryActionType {
+  ROLL
+  MOVE
+  CAPTURE
+  GOAL
+  GAME_START
+  GAME_END
+}
+
+enum ThemePreference {
+  LIGHT
+  DARK
+  SYSTEM
+}
+
+enum UserRole {
+  PLAYER
+  ADMIN
 }
