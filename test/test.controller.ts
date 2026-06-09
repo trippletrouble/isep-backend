@@ -10,6 +10,6 @@ export class TestController {
 
     @Post()
     create(@Body() dto: TestCreateDto) {
-        return { recieved: dto };
+        return { received: dto };
     }
 }
