@@ -3,6 +3,10 @@ generator client {
   output   = "../src/generated/prisma-client"
 }
 
+generator clientJs {
+  provider = "prisma-client-js"
+}
+
 generator prismaClassGenerator {
   provider                = "prisma-class-generator"
   output                  = "../src/generated/prisma-class"
@@ -77,9 +81,15 @@ enum ThemePreference {
   SYSTEM
 }
 
+enum UserRole {
+  PLAYER
+  ADMIN
+}
+
 model User {
   id                   String          @id @default(uuid()) @db.Uuid
   keycloakSub          String          @unique @map("keycloak_sub")
+  role                 UserRole        @default(PLAYER)
   username             String          @unique
   avatarUrl            String?         @map("avatar_url")
   isGuest              Boolean         @default(false) @map("is_guest")
@@ -161,7 +171,7 @@ model GameParticipant {
 }
 
 model Figure {
-  id            Int         @id @default(autoincrement())
+  id            Int         @default(autoincrement())
   sessionId     String      @map("session_id") @db.Uuid
   participantId String      @map("participant_id") @db.Uuid
   position      Int         @default(-1)
