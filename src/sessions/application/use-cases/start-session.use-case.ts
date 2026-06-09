@@ -3,6 +3,7 @@ import { PieceStatus } from '@prisma/client';
 import { SessionRepositoryPort } from '../../ports/session-repository.port';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { User } from '../../../generated/prisma-class/user';
+import { StartSessionInfo } from './Types/start-session-info';
 
 export class NotEnoughPlayersError extends Error {
   constructor() {
@@ -48,22 +49,7 @@ export class StartSessionUseCase {
     private readonly prisma: PrismaService,
   ) {}
 
-  async execute(
-    sessionId: string,
-    user: User,
-  ): Promise<{
-    sessionId: string;
-    status: string;
-    currentPlayerId: string;
-    playerOrder: string[];
-    figures: Array<{
-      id: number;
-      sessionId: string;
-      participantId: string;
-      position: number;
-      status: string;
-    }>;
-  }> {
+  async execute(sessionId: string, user: User): Promise<StartSessionInfo> {
     const session = await this.prisma.session.findUnique({
       where: { id: sessionId },
       include: { participants: true },
