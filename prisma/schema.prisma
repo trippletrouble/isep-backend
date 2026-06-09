@@ -3,6 +3,10 @@ generator client {
   output   = "../src/generated/prisma-client"
 }
 
+generator clientJs {
+  provider = "prisma-client-js"
+}
+
 generator prismaClassGenerator {
   provider                = "prisma-class-generator"
   output                  = "../src/generated/prisma-class"
