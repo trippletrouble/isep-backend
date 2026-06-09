@@ -10,4 +10,8 @@ export abstract class SessionRepositoryPort {
   abstract findSessionById(id: string): Promise<SessionWithParticipants | null>;
   abstract findByIdMinimal(id: string): Promise<Session | null>;
   abstract findUserById(id: string): Promise<User | null>;
+  abstract updateSessionById(
+    id: string,
+    data: Partial<Session>,
+  ): Promise<Session>;
 }

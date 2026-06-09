@@ -3,7 +3,7 @@ import { PieceStatus } from '@prisma/client';
 import { SessionRepositoryPort } from '../../ports';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { User } from '../../../generated/prisma-class/user';
-import { StartSessionInfoType } from './types';
+import { Participant, StartSessionInfoType } from './types';
 import {
   InvalidSessionStatusError,
   NotEnoughPlayersError,
@@ -39,50 +39,47 @@ export class StartSessionUseCase {
 
     if (!session) throw new SessionNotFoundError();
 
-    if (session.hostId !== user.id) {
-      throw new NotHostError();
-    }
+    if (session.hostId !== user.id) throw new NotHostError();
 
-    if (session.status !== 'WAITING') {
-      throw new InvalidSessionStatusError();
-    }
+    if (session.status !== 'WAITING') throw new InvalidSessionStatusError();
 
     const participants = session.participants;
-    if (participants.length < 2) {
-      throw new NotEnoughPlayersError();
-    }
 
-    const shuffledParticipants = [...participants].sort(
+    if (participants.length < 2) throw new NotEnoughPlayersError();
+
+    const shuffledParticipants: Participant[] = [...participants].sort(
       () => Math.random() - 0.5,
     );
-    const playerOrder = shuffledParticipants.map((p) => p.userId);
+    const playerIdOrder = shuffledParticipants.map((p) => p.userId);
     const firstPlayerId = shuffledParticipants[0].userId;
 
     const figuresToCreate: CreatedFigure[] = [];
-    for (let pIndex = 0; pIndex < participants.length; pIndex++) {
-      const participant = participants[pIndex];
-      for (let i = 0; i < 4; i++) {
+
+    for (
+      let playerIndex = 0;
+      playerIndex < participants.length;
+      playerIndex++
+    ) {
+      const participant = participants[playerIndex];
+      for (let figureIndex = 0; figureIndex < 4; figureIndex++) {
         figuresToCreate.push({
-          id: pIndex * 4 + (i + 1),
+          id: playerIndex * 4 + (figureIndex + 1),
           sessionId: sessionId,
           participantId: participant.id,
-          position: -1, // HOME
+          position: Postition.Home,
           status: PieceStatus.HOME,
         });
       }
     }
 
+    await this.sessionRepo.updateSessionById(sessionId, {
+      status: 'IN_PROGRESS',
+      currentPlayerId: firstPlayerId,
+      turnNumber: 0,
+      startedAt: new Date(),
+    });
+
     await this.prisma.$transaction(async (tx) => {
-      await tx.session.update({
-        where: { id: sessionId },
-        data: {
-          status: 'IN_PROGRESS',
-          currentPlayerId: firstPlayerId,
-          turnNumber: 0,
-          startedAt: new Date(),
-          updatedAt: new Date(),
-        },
-      });
 
       await tx.figure.createMany({
         data: figuresToCreate,
@@ -103,7 +100,7 @@ export class StartSessionUseCase {
       sessionId,
       status: 'IN_PROGRESS',
       currentPlayerId: firstPlayerId,
-      playerOrder,
+      playerIdOrder,
       figures: figuresToCreate.map((f) => ({
         id: f.id,
         sessionId: f.sessionId,

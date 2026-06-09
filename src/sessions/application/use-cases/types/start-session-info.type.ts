@@ -2,7 +2,7 @@ export type StartSessionInfoType = {
   sessionId: string;
   status: string;
   currentPlayerId: string;
-  playerOrder: string[];
+  playerIdOrder: string[];
   figures: Array<{
     id: number;
     sessionId: string;
