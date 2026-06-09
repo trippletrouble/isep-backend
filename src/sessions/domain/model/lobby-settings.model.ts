@@ -6,14 +6,26 @@ const VALID_ADDITIONAL_RULES: AdditionalRule[] = [
   'THREE_SIXES_LOSE_TURN',
 ];
 export class LobbySettings {
+  public readonly numberOfPlayers: number;
+  public readonly mode: GameMode = 'CLASSIC';
+  public readonly boardTheme: BoardTheme = 'CLASSIC';
+  public readonly isPrivate: boolean = false;
+  public readonly turnTimeLimitSeconds: number | null = null;
+  public readonly additionalRules: AdditionalRule[] = [];
   constructor(
-    public readonly numberOfPlayers: number,
-    public readonly mode: GameMode = 'CLASSIC',
-    public readonly boardTheme: BoardTheme = 'CLASSIC',
-    public readonly isPrivate: boolean = false,
-    public readonly turnTimeLimitSeconds: number | null = null,
-    public readonly additionalRules: AdditionalRule[] = [],
+    numberOfPlayers: number,
+    mode: GameMode = 'CLASSIC',
+    boardTheme: BoardTheme = 'CLASSIC',
+    isPrivate: boolean = false,
+    turnTimeLimitSeconds: number | null = null,
+    additionalRules: AdditionalRule[] = [],
   ) {
+    this.numberOfPlayers = numberOfPlayers;
+    this.mode = mode;
+    this.boardTheme = boardTheme;
+    this.isPrivate = isPrivate;
+    this.turnTimeLimitSeconds = turnTimeLimitSeconds;
+    this.additionalRules = additionalRules;
     this.validate();
   }
   private validate(): void {
@@ -22,13 +34,17 @@ export class LobbySettings {
     }
     if (this.turnTimeLimitSeconds !== null) {
       if (this.turnTimeLimitSeconds < 10 || this.turnTimeLimitSeconds > 120) {
-        throw new Error('turnTimeLimitSeconds must be between 10 and 120 or null');
+        throw new Error(
+          'turnTimeLimitSeconds must be between 10 and 120 or null',
+        );
       }
     }
 
     for (const rule of this.additionalRules) {
       if (!VALID_ADDITIONAL_RULES.includes(rule)) {
-        throw new Error(`Invalid additional rule: ${rule}. Valid rules are: ${VALID_ADDITIONAL_RULES.join(', ')}`);
+        throw new Error(
+          `Invalid additional rule: ${rule}. Valid rules are: ${VALID_ADDITIONAL_RULES.join(', ')}`,
+        );
       }
     }
   }
