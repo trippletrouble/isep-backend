@@ -9,7 +9,7 @@ import { GameRepositoryPort } from './ports/game-repository.port';
   providers: [
     GameService,
     {
-      provide: GameRepositoryPort,  // ← the Symbol token
+      provide: GameRepositoryPort, // ← the Symbol token
       useClass: PrismaGameRepository,
     },
   ],
