@@ -4,6 +4,7 @@ import { SessionRepositoryPort } from '../../ports';
 import { LobbySettings } from '../../domain';
 import { Session } from 'src/generated/prisma-class/session';
 import { User } from 'src/generated/prisma-class/user';
+import { SessionWithParticipants } from '../../application/use-cases/types';
 
 @Injectable()
 export class PrismaSessionRepository implements SessionRepositoryPort {
@@ -26,7 +27,7 @@ export class PrismaSessionRepository implements SessionRepositoryPort {
     });
   }
 
-  async findSessionById(id: string): Promise<Session | null> {
+  async findSessionById(id: string): Promise<SessionWithParticipants | null> {
     return this.prisma.session.findUnique({
       where: { id },
       include: {

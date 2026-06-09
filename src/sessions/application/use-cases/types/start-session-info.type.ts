@@ -1,4 +1,4 @@
-export type StartSessionInfo = {
+export type StartSessionInfoType = {
   sessionId: string;
   status: string;
   currentPlayerId: string;

@@ -3,13 +3,20 @@ import { PieceStatus } from '@prisma/client';
 import { SessionRepositoryPort } from '../../ports';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { User } from '../../../generated/prisma-class/user';
-import { StartSessionInfo } from './types/start-session-info';
+import { StartSessionInfoType } from './types';
 import {
   InvalidSessionStatusError,
   NotEnoughPlayersError,
   NotHostError,
   SessionNotFoundError,
 } from './errors';
+
+export {
+  InvalidSessionStatusError,
+  NotEnoughPlayersError,
+  NotHostError,
+  SessionNotFoundError,
+};
 
 type CreatedFigure = {
   id: number;
@@ -27,12 +34,10 @@ export class StartSessionUseCase {
     private readonly prisma: PrismaService,
   ) {}
 
-  async execute(sessionId: string, user: User): Promise<StartSessionInfo> {
-    const session = await this.sessionRepo.findById(sessionId);
+  async execute(sessionId: string, user: User): Promise<StartSessionInfoType> {
+    const session = await this.sessionRepo.findSessionById(sessionId);
 
-    if (!session) {
-      throw new SessionNotFoundError();
-    }
+    if (!session) throw new SessionNotFoundError();
 
     if (session.hostId !== user.id) {
       throw new NotHostError();
