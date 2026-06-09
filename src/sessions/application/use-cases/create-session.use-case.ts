@@ -10,7 +10,7 @@ import { Session } from '../../domain/model/session.model';
 import { GameParticipant } from '../../domain/model/participant.model';
 import { LobbyDto, LobbyPlayerDto, LobbySettingsDto } from '../dtos/lobby.dto';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { v4 as uuidv4 } from 'uuid';
+
 
 @Injectable()
 export class CreateSessionUseCase {
@@ -38,7 +38,6 @@ export class CreateSessionUseCase {
       settings.turnTimeLimitSeconds,
       settings.additionalRules,
     );
-    console.log(uuidv4());
     const { session, hostParticipant } = await this.sessionRepo.createSession(
       hostId,
       lobbySettings,

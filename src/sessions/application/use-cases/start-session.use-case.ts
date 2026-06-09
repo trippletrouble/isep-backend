@@ -82,7 +82,6 @@ export class StartSessionUseCase {
     }
 
     const participants = session.participants;
-    console.log(participants);
     if (participants.length < 2) {
       throw new NotEnoughPlayersError();
     }
