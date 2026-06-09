@@ -1,6 +1,7 @@
 import { LobbySettings } from '../domain';
 import { User } from '../../generated/prisma-class/user';
 import { Session } from '../../generated/prisma-class/session';
+import { GameStateType } from '../application/use-cases/types/game-state.type';
 export abstract class SessionRepositoryPort {
   abstract createSession(
     hostId: string,
@@ -9,4 +10,5 @@ export abstract class SessionRepositoryPort {
   abstract findSessionById(id: string): Promise<Session | null>;
   abstract findByIdMinimal(id: string): Promise<Session | null>;
   abstract findUserById(id: string): Promise<User | null>;
+  abstract findGameStateById(id: string): Promise<GameStateType | null>;
 }
