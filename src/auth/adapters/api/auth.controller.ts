@@ -1,15 +1,20 @@
-import { Controller, Get, Post, Req, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Req,
+  Res,
+  UnauthorizedException,
+  UseGuards,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Request, Response } from 'express';
-import { ConfigService } from '@nestjs/config';
 import { AuthService } from '../../application/auth.service';
+import { appConfig } from '../../../common/config/app.config';
 
 @Controller('auth')
 export class AuthController {
-  constructor(
-    private readonly config: ConfigService,
-    private readonly authService: AuthService,
-  ) {}
+  constructor(private readonly authService: AuthService) {}
 
   @Get('oauth')
   @UseGuards(AuthGuard('keycloak'))
@@ -22,9 +27,9 @@ export class AuthController {
   callback(@Req() req: Request, @Res() res: Response): void {
     res.cookie('session', (req.user as any).keycloakSub, {
       httpOnly: true,
-      secure:   this.config.get('NODE_ENV') === 'production',
+      secure: appConfig.node_env === 'production',
       sameSite: 'lax',
-      maxAge:   1000 * 60 * 60,
+      maxAge: 1000 * 60 * 60,
     });
 
     res.redirect('/');
@@ -39,9 +44,9 @@ export class AuthController {
     if (!user) throw new UnauthorizedException();
 
     return {
-      id:       user.id,
+      id: user.id,
       username: user.username,
-      role:     user.role,
+      role: user.role,
     };
   }
 
@@ -49,9 +54,9 @@ export class AuthController {
   logout(@Res() res: Response): void {
     res.cookie('session', '', {
       httpOnly: true,
-      secure:   this.config.get('NODE_ENV') === 'production',
+      secure: appConfig.node_env === 'production',
       sameSite: 'lax',
-      maxAge:   0,
+      maxAge: 0,
     });
 
     res.status(200).json({ message: 'Logged out' });
