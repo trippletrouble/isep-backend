@@ -4,6 +4,7 @@ import { Strategy } from 'passport-oauth2';
 import { ConfigService } from '@nestjs/config';
 import { AuthService } from '../application/auth.service';
 import { User } from '../../generated/prisma-class/user';
+import { UserRole } from '../../generated/prisma-client/enums';
 
 @Injectable()
 export class KeycloakStrategy extends PassportStrategy(Strategy, 'keycloak') {
@@ -41,10 +42,14 @@ export class KeycloakStrategy extends PassportStrategy(Strategy, 'keycloak') {
 
     const userinfo = await res.json();
 
+    const realmRoles: string[] = userinfo.realm_access?.roles ?? [];
+    const role = realmRoles.includes('admin') ? UserRole.ADMIN : UserRole.PLAYER;
+
     return this.authService.findOrCreateUser({
       sub:       userinfo.sub,
       username:  userinfo.preferred_username,
       avatarUrl: userinfo.picture ?? null,
+      role,
     });
   }
 }
