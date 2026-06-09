@@ -3,7 +3,7 @@ import { PieceStatus } from '@prisma/client';
 import { SessionRepositoryPort } from '../../ports';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { User } from '../../../generated/prisma-class/user';
-import { StartSessionInfo } from './Types/start-session-info';
+import { StartSessionInfo } from './types/start-session-info';
 import {
   InvalidSessionStatusError,
   NotEnoughPlayersError,
@@ -28,10 +28,7 @@ export class StartSessionUseCase {
   ) {}
 
   async execute(sessionId: string, user: User): Promise<StartSessionInfo> {
-    const session = await this.prisma.session.findUnique({
-      where: { id: sessionId },
-      include: { participants: true },
-    });
+    const session = await this.sessionRepo.findById(sessionId);
 
     if (!session) {
       throw new SessionNotFoundError();
