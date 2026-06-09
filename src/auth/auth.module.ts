@@ -6,6 +6,7 @@ import { PrismaUserRepository } from './adapters/persistence/prisma-user.reposit
 import { KeycloakStrategy } from './strategies/keycloak.strategy';
 import { USER_REPOSITORY } from './ports/user-repository.port';
 import { ConfigModule } from '@nestjs/config';
+import { SessionGuard } from './guards/session.guard';
 
 @Module({
   imports: [PassportModule, ConfigModule],
@@ -13,10 +14,14 @@ import { ConfigModule } from '@nestjs/config';
   providers: [
     AuthService,
     KeycloakStrategy,
+    SessionGuard,
     {
       provide:  USER_REPOSITORY,
       useClass: PrismaUserRepository,
     },
+  ],
+  exports: [
+    AuthService, SessionGuard
   ],
 })
 export class AuthModule {}
