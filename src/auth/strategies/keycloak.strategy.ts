@@ -10,9 +10,7 @@ import { appConfig } from '../../common/config/app.config';
 export class KeycloakStrategy extends PassportStrategy(Strategy, 'keycloak') {
   private readonly userinfoUrl: string;
 
-  constructor(
-    private readonly authService: AuthService,
-  ) {
+  constructor(private readonly authService: AuthService) {
     const url = appConfig.keycloak_url;
     const realm = appConfig.keycloak_realm;
 
