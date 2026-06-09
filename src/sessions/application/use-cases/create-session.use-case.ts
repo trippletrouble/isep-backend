@@ -3,7 +3,7 @@
  * Part of the Application Layer - orchestrates the creation process.
  */
 
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { SessionRepositoryPort } from '../../ports/session-repository.port';
 import { LobbySettings } from '../../domain/model/lobby-settings.model';
 import { Session } from '../../domain/model/session.model';
@@ -14,6 +14,7 @@ import { PrismaService } from '../../../prisma/prisma.service';
 @Injectable()
 export class CreateSessionUseCase {
   constructor(
+    @Inject(SessionRepositoryPort)
     private readonly sessionRepo: SessionRepositoryPort,
     private readonly prisma: PrismaService,
   ) {}

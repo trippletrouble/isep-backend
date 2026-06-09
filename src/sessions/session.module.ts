@@ -5,9 +5,10 @@ import { SessionRepositoryPort } from './ports/session-repository.port';
 import { PrismaSessionRepository } from './adapters/persistence/prisma-session.repository';
 import { SessionsController } from './adapters/api/sessions.controller';
 import { CreateSessionUseCase } from './application/use-cases/create-session.use-case';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, AuthModule],
   controllers: [SessionsController],
   providers: [
     CreateSessionUseCase,
