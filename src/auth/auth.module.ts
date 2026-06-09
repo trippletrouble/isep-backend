@@ -16,12 +16,10 @@ import { SessionGuard } from './guards/session.guard';
     KeycloakStrategy,
     SessionGuard,
     {
-      provide:  USER_REPOSITORY,
+      provide: USER_REPOSITORY,
       useClass: PrismaUserRepository,
     },
   ],
-  exports: [
-    AuthService, SessionGuard
-  ],
+  exports: [AuthService, SessionGuard],
 })
 export class AuthModule {}

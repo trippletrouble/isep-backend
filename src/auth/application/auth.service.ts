@@ -21,7 +21,12 @@ export class AuthService {
     private readonly userRepository: IUserRepository,
   ) {}
 
-  async findOrCreateUser(profile: { sub: any; username: any; avatarUrl: any; role: "ADMIN" | "PLAYER" }): Promise<User> {
+  async findOrCreateUser(profile: {
+    sub: any;
+    username: any;
+    avatarUrl: any;
+    role: 'ADMIN' | 'PLAYER';
+  }): Promise<User> {
     if (!profile.sub || !profile.username) {
       throw new UnauthorizedException('Incomplete OIDC-Profile');
     }
@@ -31,9 +36,9 @@ export class AuthService {
 
     const dto: CreateUserDto = {
       keycloakSub: profile.sub,
-      username:    profile.username,
-      avatarUrl:   profile.avatarUrl ?? null,
-      role:        profile.role,
+      username: profile.username,
+      avatarUrl: profile.avatarUrl ?? null,
+      role: profile.role,
     };
 
     return this.userRepository.create(dto);

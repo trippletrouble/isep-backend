@@ -27,10 +27,10 @@ export class PrismaUserRepository implements IUserRepository {
     return this.prisma.user.create({
       data: {
         keycloakSub: dto.keycloakSub,
-        username:    dto.username,
-        avatarUrl:   dto.avatarUrl ?? null,
-        isGuest:     false,
-        role:        dto.role ?? UserRole.PLAYER,
+        username: dto.username,
+        avatarUrl: dto.avatarUrl ?? null,
+        isGuest: false,
+        role: dto.role ?? UserRole.PLAYER,
       },
     });
   }

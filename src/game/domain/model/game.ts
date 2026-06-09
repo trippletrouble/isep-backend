@@ -1,4 +1,4 @@
-export type GameStatus = 'WAITING' | 'IN_PROGRESS' | 'FINISHED';
+ export type GameStatus = 'WAITING' | 'IN_PROGRESS' | 'FINISHED';
 
 export class Game {
   constructor(
