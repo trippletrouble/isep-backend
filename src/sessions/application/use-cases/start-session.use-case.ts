@@ -1,37 +1,15 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PieceStatus } from '@prisma/client';
-import { SessionRepositoryPort } from '../../ports/session-repository.port';
+import { SessionRepositoryPort } from '../../ports';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { User } from '../../../generated/prisma-class/user';
 import { StartSessionInfo } from './Types/start-session-info';
-
-export class NotEnoughPlayersError extends Error {
-  constructor() {
-    super('NOT_ENOUGH_PLAYERS');
-    this.name = 'NotEnoughPlayersError';
-  }
-}
-
-export class NotHostError extends Error {
-  constructor() {
-    super('NOT_HOST');
-    this.name = 'NotHostError';
-  }
-}
-
-export class InvalidSessionStatusError extends Error {
-  constructor() {
-    super('Session is not in WAITING status');
-    this.name = 'InvalidSessionStatusError';
-  }
-}
-
-export class SessionNotFoundError extends Error {
-  constructor() {
-    super('SESSION_NOT_FOUND');
-    this.name = 'SessionNotFoundError';
-  }
-}
+import {
+  InvalidSessionStatusError,
+  NotEnoughPlayersError,
+  NotHostError,
+  SessionNotFoundError,
+} from './errors';
 
 type CreatedFigure = {
   id: number;
