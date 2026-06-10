@@ -1,0 +1,51 @@
+import { Inject, Injectable } from '@nestjs/common';
+import { SessionRepositoryPort } from '../../ports';
+import { PossibleMoveCalculatorUseCase } from './possible-move-calculator.use-case';
+import {
+  DiceNotRolledError,
+  InvalidSessionStatusError,
+  NotYourTurnError,
+  SessionNotFoundError,
+} from './errors';
+import { PossibleMovesResultType } from './types/possible-moves-result.type';
+
+@Injectable()
+export class GetPossibleMovesUseCase {
+  constructor(
+    @Inject(SessionRepositoryPort)
+    private readonly sessionRepository: SessionRepositoryPort,
+    private readonly possibleMoveCalculator: PossibleMoveCalculatorUseCase,
+  ) {}
+
+  async execute(
+    sessionId: string,
+    playerId: string,
+  ): Promise<PossibleMovesResultType> {
+    const gameState = await this.sessionRepository.findGameStateById(sessionId);
+
+    if (!gameState) {
+      throw new SessionNotFoundError();
+    }
+
+    if (gameState.status !== 'IN_PROGRESS') {
+      throw new InvalidSessionStatusError();
+    }
+
+    if (gameState.currentPlayerId !== playerId) {
+      throw new NotYourTurnError();
+    }
+
+    if (!gameState.diceRolledThisTurn || gameState.lastDiceValue === null) {
+      throw new DiceNotRolledError();
+    }
+
+    return {
+      diceValue: gameState.lastDiceValue,
+      possibleMoves: this.possibleMoveCalculator.calculate(
+        gameState,
+        playerId,
+        gameState.lastDiceValue,
+      ),
+    };
+  }
+}
