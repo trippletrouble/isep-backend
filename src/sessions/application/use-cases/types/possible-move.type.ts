@@ -3,4 +3,4 @@ export type PossibleMoveType = {
   fromPosition: number;
   toPosition: number;
   capturesOpponent: boolean;
-}
+};

@@ -1,9 +1,13 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { SessionRepositoryPort } from 'src/sessions/ports';
 import { DiceClientPort } from 'src/sessions/ports/dice-client.port';
 import { PossibleMoveCalculatorUseCase } from './possible-move-calculator.use-case';
-import { NotYourTurnError } from './errors/not-your-turn.error';
-import { DiceAlreadyRolledError } from './errors/dice-already-rolled.error';
+import {
+  DiceAlreadyRolledError,
+  InvalidSessionStatusError,
+  NotYourTurnError,
+  SessionNotFoundError,
+} from './errors';
 import { DiceRollResultType } from './types/dice-roll-result.type';
 
 @Injectable()
@@ -48,19 +52,12 @@ export class RollDiceUseCase {
     const hasMoves = possibleMoves.length > 0;
     const turnForfeit = consecutiveSixes >= 3;
     const rollAgain = value === 6 && !turnForfeit && hasMoves;
-    if (consecutiveSixes === 6) {
-      await this.sessionRepository.updateAfterDiceRoll(sessionId, {
-        lastDiceValue: value,
-        diceRolledThisTurn: false,
-        consecutiveSixes,
-      });
-    } else {
-      await this.sessionRepository.updateAfterDiceRoll(sessionId, {
-        lastDiceValue: value,
-        diceRolledThisTurn: true,
-        consecutiveSixes,
-      });
-    }
+
+    await this.sessionRepository.updateAfterDiceRoll(sessionId, {
+      lastDiceValue: value,
+      diceRolledThisTurn: !turnForfeit,
+      consecutiveSixes,
+    });
 
     if (!hasMoves || turnForfeit) {
       await this.sessionRepository.passTurn(sessionId, playerId);

@@ -103,10 +103,8 @@ export class PossibleMoveCalculatorUseCase {
     const goalStart = GOAL_START_FIELDS[color];
 
     if (fromPosition === -1) {
-      console.log("from home ")
       return diceValue === 6 ? startField : null;
     }
-    console.log("not from home")
     if (fromPosition >= 0 && fromPosition <= 39) {
       const progressFromStart = (fromPosition - startField + 40) % 40;
       const nextProgress = progressFromStart + diceValue;

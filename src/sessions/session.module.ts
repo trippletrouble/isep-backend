@@ -8,10 +8,10 @@ import { CreateSessionUseCase } from './application';
 import { AuthModule } from '../auth/auth.module';
 import { GetGameStateUseCase } from './application/use-cases/get-game-state.use-case';
 import { RollDiceUseCase } from './application/use-cases/roll-dice.use-case';
+import { GetPossibleMovesUseCase } from './application/use-cases/get-possible-moves.use-case';
 import { PossibleMoveCalculatorUseCase } from './application/use-cases/possible-move-calculator.use-case';
 import { DiceClientPort } from './ports/dice-client.port';
 import { HttpDiceClientAdapter } from './adapters/dice/http-dice-client.adapter';
-import { StartSessionUseCase } from './application/use-cases/start-session.use-case';
 import { ConfigModule } from '@nestjs/config';
 
 @Module({
@@ -19,9 +19,9 @@ import { ConfigModule } from '@nestjs/config';
   controllers: [SessionsController],
   providers: [
     CreateSessionUseCase,
-    StartSessionUseCase,
     GetGameStateUseCase,
     RollDiceUseCase,
+    GetPossibleMovesUseCase,
     PossibleMoveCalculatorUseCase,
     HttpDiceClientAdapter,
     {
@@ -36,8 +36,8 @@ import { ConfigModule } from '@nestjs/config';
   exports: [
     SessionRepositoryPort,
     CreateSessionUseCase,
-    StartSessionUseCase,
     RollDiceUseCase,
+    GetPossibleMovesUseCase,
   ],
 })
 export class SessionModule {}
