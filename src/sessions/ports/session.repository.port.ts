@@ -1,7 +1,11 @@
 import { LobbySettings } from '../domain';
 import { User } from '../../generated/prisma-class/user';
 import { Session } from '../../generated/prisma-class/session';
-import { SessionWithParticipants } from '../application/use-cases/types';
+import {
+  Participant,
+  SessionWithParticipants,
+} from '../application/use-cases/types';
+import { ParticipantDto } from '../application/dtos/participant.dto';
 export abstract class SessionRepositoryPort {
   abstract createSession(
     hostId: string,
@@ -14,4 +18,7 @@ export abstract class SessionRepositoryPort {
     id: string,
     data: Partial<Session>,
   ): Promise<Session>;
+  abstract createParticipant(
+    participant: ParticipantDto,
+  ): Promise<Participant | null>;
 }

@@ -6,11 +6,9 @@ import {
   HttpCode,
   HttpException,
   Param,
-  Req,
 } from '@nestjs/common';
 import { CreateSessionUseCase } from '../../application/use-cases/create-session.use-case';
 import { CreateSessionRequestDto } from '../../application/dtos/create-session.request.dto';
-import { LobbyDto } from '../../application/dtos/lobby.dto';
 import { SessionGuard } from '../../../auth/guards/session.guard';
 import { AuthService } from '../../../auth/application/auth.service';
 import { CurrentUser } from '../../../auth/decorators/current-user.decorator';
@@ -22,9 +20,6 @@ import {
   SessionNotFoundError,
   StartSessionUseCase,
 } from '../../application/use-cases/start-session.use-case';
-interface AuthenticatedRequest extends Request {
-  user?: { userId: string };
-}
 @Controller('sessions')
 export class SessionsController {
   constructor(
@@ -51,7 +46,7 @@ export class SessionsController {
     sessionId: string;
     status: string;
     currentPlayerId: string;
-    playerOrder: string[];
+    playerIdOrder: string[];
     figures: Array<{
       id: number;
       sessionId: string;

@@ -4,12 +4,36 @@ import { SessionRepositoryPort } from '../../ports';
 import { LobbySettings } from '../../domain';
 import { Session } from 'src/generated/prisma-class/session';
 import { User } from 'src/generated/prisma-class/user';
-import { SessionWithParticipants } from '../../application/use-cases/types';
+import {
+  Participant,
+  SessionWithParticipants,
+} from '../../application/use-cases/types';
 import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class PrismaSessionRepository implements SessionRepositoryPort {
   constructor(private readonly prisma: PrismaService) {}
+  async createParticipant(
+    participant: Participant,
+  ): Promise<Participant | null> {
+    const promis_participant = await this.prisma.gameParticipant.create({
+      data: {
+        sessionId:participant.sessionId,
+        userId:participant.userId,
+        color: participant.color,
+        updatedAt: participant.updatedAt,
+        type: participant.type,
+        isBot: participant.isBot,
+        isCurrentTurn: participant.isCurrentTurn,
+        hasFinished: participant.hasFinished,
+        figuresInGoal: participant.figuresInGoal,
+        placement: participant.placement,
+        figuresCaptured: participant.figuresCaptured,
+        joinedAt: participant.joinedAt,
+      },
+    });
+    return promis_participant;
+  }
 
   async createSession(
     hostId: string,

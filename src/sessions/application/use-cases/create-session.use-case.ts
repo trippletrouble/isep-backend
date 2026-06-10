@@ -2,8 +2,9 @@ import { Inject, Injectable } from '@nestjs/common';
 import { SessionRepositoryPort } from '../../ports';
 import { LobbySettings } from '../../domain';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { Session } from '../../../generated/prisma-client/client';
-
+import { PlayerColor, Session } from '../../../generated/prisma-client/client';
+import { ParticipantDto } from '../dtos/participant.dto';
+import { PlayerType } from '@prisma/client';
 
 @Injectable()
 export class CreateSessionUseCase {
@@ -37,7 +38,22 @@ export class CreateSessionUseCase {
 
     const user = await this.sessionRepo.findUserById(hostId);
     if (!user) throw new Error('Host user not found');
-
-    return this.sessionRepo.createSession(hostId, lobbySettings);
+    const session = this.sessionRepo.createSession(hostId, lobbySettings);
+    const participant = new ParticipantDto(
+      new Date(),
+      (await session).id,
+      (await session).hostId,
+      PlayerColor.RED,
+      PlayerType.HUMAN,
+      false,
+      true,
+      false,
+      0,
+      null,
+      0,
+      new Date(),
+    );
+    await this.sessionRepo.createParticipant(participant);
+    return session;
   }
 }
