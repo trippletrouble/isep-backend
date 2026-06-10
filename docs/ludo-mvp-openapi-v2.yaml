@@ -1,0 +1,1949 @@
+openapi: 3.0.3
+
+info:
+  title: Mensch ärgere dich nicht – MVP API (Level 0)
+  description: |
+    REST API für das **MVP (Level 0)** der Mensch-ärgere-dich-nicht-Plattform.
+
+    Dieses Dokument enthält ausschließlich die Endpunkte und Schemas, die für
+    **Phase 1 (Sprint 1–2)** implementiert werden.
+
+    ## Umfang des MVP
+    - Registrierung (permanent + Gast) und Login via Keycloak
+    - Online-Multiplayer mit 2–4 menschlichen Spielern
+    - Echtzeit-Updates via SSE / WebSocket
+    - Lobby-System (Erstellen, Beitreten, Verlassen, Einladen, Konfigurieren)
+    - Benutzerprofile und Statistiken
+    - Vollständige Spiellogik (Würfeln, Ziehen, Schlagen, Gewinnen)
+
+    ## Nicht enthalten im MVP
+    Bots, In-Game Chat, Leaderboard, Quizduell, Ereigniskarten, Pestfliege,
+    dynamisches Spielfeld und Zufallsereignisse folgen in Phase 2–3.
+
+    ## Response-Hülle
+    Alle Antworten verwenden einheitliche Wrapper:
+    ```json
+    { "status": "success", "timestamp": "2026-06-01T12:00:00Z", "data": { … } }
+    ```
+    Fehler:
+    ```json
+    { "status": "error", "code": "NOT_YOUR_TURN", "message": "…", "timestamp": "…" }
+    ```
+
+    ## Authentifizierung
+    Geschützte Endpunkte erfordern einen `Authorization: Bearer <jwt>` Header.
+    Der JWT wird über Keycloak (OAuth 2.0) oder `/auth/login` bezogen.
+
+  version: 1.0.0-mvp
+  contact:
+    name: Ludo Game Dev Team
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Lokale Entwicklung
+  - url: https://staging.ludo-game.example.com/api/v1
+    description: Staging
+
+tags:
+  - name: Auth
+    description: BFF-Authentifizierung mit OIDC (Keycloak)
+  - name: Users
+    description: Benutzerprofile und Statistiken
+  - name: Sessions
+    description: Session-Lifecycle – Erstellen, Starten, Löschen
+  - name: Lobby
+    description: Beitreten, Verlassen, Einladen, Konfigurieren
+  - name: Gameplay
+    description: Würfeln, Ziehen, Spielstand, Ergebnisse
+  - name: Realtime
+    description: SSE für Live-Updates
+
+security:
+  - SessionCookieAuth: []
+
+# ===========================================================================
+# Components
+# ===========================================================================
+components:
+
+  securitySchemes:
+    SessionCookieAuth:
+      type: apiKey
+      in: cookie
+      name: session
+      description: |
+        Session-Cookie, das nach erfolgreichem OIDC-Login ausgestellt wird.
+
+  parameters:
+    sessionIdPath:
+      name: id
+      in: path
+      required: true
+      description: UUID der Spielsession.
+      schema:
+        type: string
+        format: uuid
+      example: "a3bb189e-8bf9-3888-9912-ace4e6543002"
+
+    userIdPath:
+      name: userId
+      in: path
+      required: true
+      description: UUID des Benutzers.
+      schema:
+        type: string
+        format: uuid
+      example: "550e8400-e29b-41d4-a716-446655440000"
+
+    playerIdPath:
+      name: playerId
+      in: path
+      required: true
+      description: UUID des Spielers.
+      schema:
+        type: string
+        format: uuid
+      example: "550e8400-e29b-41d4-a716-446655440000"
+
+    pageQuery:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+      description: Seitenindex (0-basiert).
+
+    sizeQuery:
+      name: size
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 50
+        default: 20
+      description: Ergebnisse pro Seite (max. 50).
+
+  schemas:
+
+    # -- Enumerations ---------------------------------------------------------
+
+    GameStatus:
+      type: string
+      enum: [WAITING, IN_PROGRESS, FINISHED]
+      description: |
+        `WAITING`     – Lobby offen, Spiel nicht gestartet
+        `IN_PROGRESS` – Spiel läuft
+        `FINISHED`    – Spiel beendet, Gewinner ermittelt
+
+    PlayerColor:
+      type: string
+      enum: [RED, BLUE, GREEN, YELLOW]
+
+    PieceStatus:
+      type: string
+      enum: [HOME, ACTIVE, GOAL]
+      description: |
+        `HOME`   – Figur noch nicht auf dem Spielfeld
+        `ACTIVE` – Figur auf dem Hauptfeld oder in der Zielgeraden
+        `GOAL`   – Figur hat das Ziel erreicht
+
+    PlayerType:
+      type: string
+      enum: [HUMAN]
+      description: Im MVP gibt es nur menschliche Spieler (Bots folgen in Phase 2).
+
+    GameMode:
+      type: string
+      enum: [CLASSIC]
+      description: Im MVP ist nur der klassische Modus verfügbar (EXTENDED und BLITZ folgen in Phase 2).
+
+    BoardTheme:
+      type: string
+      enum: [CLASSIC]
+      description: Im MVP ist nur das klassische Spielfeld verfügbar (DESERT, ICE folgen später).
+
+    AdditionalRule:
+      type: string
+      enum: [THROW_AGAIN_ON_6, THREE_SIXES_LOSE_TURN]
+      description: |
+        Regelvarianten im MVP:
+        `THROW_AGAIN_ON_6`       – bei einer 6 nochmal würfeln (Standard: aktiv)
+        `THREE_SIXES_LOSE_TURN`  – 3× hintereinander 6 = Zug verloren
+
+    MoveOutcome:
+      type: string
+      enum: [MOVED, CAPTURED, GOAL, GAME_WON]
+      description: |
+        `MOVED`     – Figur normal bewegt
+        `CAPTURED`  – Gegner-Figur geschlagen und zurück zum Start
+        `GOAL`      – Figur hat das Ziel erreicht
+        `GAME_WON`  – Letzte Figur im Ziel, Spiel gewonnen
+
+    ThemePreference:
+      type: string
+      enum: [LIGHT, DARK, SYSTEM]
+
+    GameHistoryActionType:
+      type: string
+      enum: [ROLL, MOVE, CAPTURE, GOAL, GAME_START, GAME_END]
+
+    # -- Response Wrapper -----------------------------------------------------
+
+    SuccessResponse:
+      type: object
+      required:
+        - status
+        - timestamp
+      properties:
+        status:
+          type: string
+          enum: [success]
+          example: success
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-06-01T12:00:00Z"
+
+    ErrorResponse:
+      type: object
+      required:
+        - status
+        - code
+        - message
+        - timestamp
+      properties:
+        status:
+          type: string
+          enum: [error]
+          example: error
+        code:
+          type: string
+          description: Maschinenlesbarer Fehlercode (SCREAMING_SNAKE_CASE).
+          example: "NOT_YOUR_TURN"
+        message:
+          type: string
+          description: Menschenlesbarer Fehlertext.
+          example: "Du bist nicht an der Reihe. Aktueller Spieler ist BLAU."
+        details:
+          type: object
+          description: Optionale Zusatzinformationen (z.B. Validierungsdetails).
+        timestamp:
+          type: string
+          format: date-time
+
+    # -- Auth -----------------------------------------------------------------
+
+    SessionUser:
+      type: object
+      required:
+        - userId
+        - username
+        - roles
+      properties:
+        userId:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        username:
+          type: string
+          example: "CoolPlayer42"
+        roles:
+          type: array
+          items:
+            type: string
+          example: ["USER"]
+
+    # -- Users ----------------------------------------------------------------
+
+    PlayerProfile:
+      type: object
+      required:
+        - id
+        - username
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        username:
+          type: string
+          example: "CoolPlayer42"
+        avatarUrl:
+          type: string
+          format: uri
+          nullable: true
+          example: "https://cdn.ludo-game.example.com/avatars/p42.png"
+        themePreference:
+          $ref: '#/components/schemas/ThemePreference'
+        isGuest:
+          type: boolean
+          example: false
+        stats:
+          $ref: '#/components/schemas/PlayerStats'
+
+    PlayerStats:
+      type: object
+      properties:
+        gamesPlayed:
+          type: integer
+          minimum: 0
+          example: 42
+        gamesWon:
+          type: integer
+          minimum: 0
+          example: 17
+        gamesLost:
+          type: integer
+          minimum: 0
+          example: 25
+        winRatio:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Verhältnis Siege zu gespielte Spiele (0.0–1.0).
+          example: 0.40
+        totalFiguresCaptured:
+          type: integer
+          minimum: 0
+          description: Gegnerische Figuren insgesamt geschlagen.
+          example: 183
+
+    # -- Game Entities --------------------------------------------------------
+
+    Figure:
+      type: object
+      description: |
+        Eine Spielfigur. Jeder Spieler besitzt 4 Figuren.
+        Globale IDs: ROT = 0–3, BLAU = 4–7, GRÜN = 8–11, GELB = 12–15.
+      required:
+        - id
+        - playerId
+        - position
+        - status
+      properties:
+        id:
+          type: integer
+          minimum: 0
+          maximum: 15
+          description: Global eindeutige Figuren-ID (0–15).
+          example: 5
+        playerId:
+          type: string
+          format: uuid
+        position:
+          type: integer
+          minimum: -1
+          maximum: 56
+          description: |
+            Absolute Brettposition:
+            `-1`    = HOME (Startbereich, nicht auf dem Brett)
+            `0–39`  = Hauptfeld (geteilt von allen Spielern)
+            `40–55` = Farbspezifische Zielgerade (4 Felder × 4 Spieler)
+            `56`    = GOAL erreicht
+          example: 14
+        status:
+          $ref: '#/components/schemas/PieceStatus'
+
+    Player:
+      type: object
+      description: Ein Spieler in einer bestimmten Spielsession.
+      required:
+        - id
+        - username
+        - color
+        - type
+        - isCurrentTurn
+        - hasFinished
+        - figuresInGoal
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        username:
+          type: string
+          example: "CoolPlayer42"
+        color:
+          $ref: '#/components/schemas/PlayerColor'
+        type:
+          $ref: '#/components/schemas/PlayerType'
+        isCurrentTurn:
+          type: boolean
+          example: true
+        hasFinished:
+          type: boolean
+          description: True wenn alle 4 Figuren im Ziel sind.
+          example: false
+        figuresInGoal:
+          type: integer
+          minimum: 0
+          maximum: 4
+          description: Anzahl der Figuren dieses Spielers im Ziel.
+          example: 2
+
+    LobbySettings:
+      type: object
+      description: Konfiguration für eine Spielsession.
+      properties:
+        numberOfPlayers:
+          type: integer
+          minimum: 2
+          maximum: 4
+          description: Gesamtzahl Spielerslots.
+          example: 4
+        mode:
+          $ref: '#/components/schemas/GameMode'
+        boardTheme:
+          $ref: '#/components/schemas/BoardTheme'
+        isPrivate:
+          type: boolean
+          default: false
+          description: |
+            `true` = Spiel nicht in der öffentlichen Liste sichtbar,
+            nur über Einladungslink beitretbar.
+          example: false
+        turnTimeLimitSeconds:
+          type: integer
+          minimum: 10
+          maximum: 120
+          nullable: true
+          description: Maximale Sekunden pro Zug. Null = kein Zeitlimit.
+          example: null
+        additionalRules:
+          type: array
+          description: Aktive Regelvarianten.
+          items:
+            $ref: '#/components/schemas/AdditionalRule'
+          example: ["THROW_AGAIN_ON_6", "THREE_SIXES_LOSE_TURN"]
+
+    GameState:
+      type: object
+      description: Vollständiger Spielstand-Snapshot.
+      required:
+        - sessionId
+        - status
+        - players
+        - figures
+        - currentPlayerId
+        - turnNumber
+        - diceRolledThisTurn
+        - activeRules
+        - consecutiveSixes
+        - createdAt
+        - lastUpdatedAt
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+          example: "a3bb189e-8bf9-3888-9912-ace4e6543002"
+        status:
+          $ref: '#/components/schemas/GameStatus'
+        mode:
+          $ref: '#/components/schemas/GameMode'
+        boardTheme:
+          $ref: '#/components/schemas/BoardTheme'
+        players:
+          type: array
+          minItems: 2
+          maxItems: 4
+          items:
+            $ref: '#/components/schemas/Player'
+        figures:
+          type: array
+          description: Alle Figuren im Spiel (8–16, je 4 pro Spieler).
+          minItems: 8
+          maxItems: 16
+          items:
+            $ref: '#/components/schemas/Figure'
+        currentPlayerId:
+          type: string
+          format: uuid
+          description: Spieler der gerade an der Reihe ist.
+        turnNumber:
+          type: integer
+          minimum: 0
+          description: Monoton steigender Rundenzähler seit Spielstart.
+          example: 12
+        lastDiceValue:
+          type: integer
+          minimum: 1
+          maximum: 6
+          nullable: true
+          description: Ergebnis des letzten Würfelwurfs. Null vor dem ersten Wurf.
+          example: 4
+        diceRolledThisTurn:
+          type: boolean
+          description: Ob der aktuelle Spieler in dieser Runde bereits gewürfelt hat.
+        consecutiveSixes:
+          type: integer
+          minimum: 0
+          maximum: 3
+          description: |
+            Anzahl aufeinanderfolgender Sechser in dieser Runde.
+            Bei 3 (wenn THREE_SIXES_LOSE_TURN aktiv) verfällt der Zug.
+          example: 0
+        activeRules:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdditionalRule'
+        winnerId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Gewinner-ID. Null solange das Spiel läuft.
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-06-01T14:00:00Z"
+        lastUpdatedAt:
+          type: string
+          format: date-time
+          description: Zeitstempel der letzten Zustandsänderung.
+          example: "2026-06-01T14:05:32Z"
+
+    Lobby:
+      type: object
+      description: Lobby-Ansicht vor Spielstart (WAITING).
+      required:
+        - sessionId
+        - hostId
+        - settings
+        - players
+        - status
+        - createdAt
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+        hostId:
+          type: string
+          format: uuid
+          description: Spieler-ID des Lobby-Erstellers (Host).
+        settings:
+          $ref: '#/components/schemas/LobbySettings'
+        players:
+          type: array
+          minItems: 1
+          maxItems: 4
+          items:
+            $ref: '#/components/schemas/Player'
+        status:
+          $ref: '#/components/schemas/GameStatus'
+        inviteToken:
+          ***ENTFERNT*** string
+          nullable: true
+          description: Vorhanden wenn der Host einen Einladungslink generiert hat.
+          example: "inv_a8f3c2"
+        createdAt:
+          type: string
+          format: date-time
+
+    SessionSummary:
+      type: object
+      description: Kurzinfo einer Session für die Lobby-Liste.
+      required:
+        - sessionId
+        - status
+        - playerCount
+        - maxPlayers
+        - mode
+        - isPrivate
+        - createdAt
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/GameStatus'
+        playerCount:
+          type: integer
+          minimum: 0
+          maximum: 4
+          example: 2
+        maxPlayers:
+          type: integer
+          minimum: 2
+          maximum: 4
+          example: 4
+        mode:
+          $ref: '#/components/schemas/GameMode'
+        boardTheme:
+          $ref: '#/components/schemas/BoardTheme'
+        hostUsername:
+          type: string
+          example: "CoolPlayer42"
+        isPrivate:
+          type: boolean
+          example: false
+        createdAt:
+          type: string
+          format: date-time
+
+    PossibleMove:
+      type: object
+      description: Ein gültiger Zug den der Server nach dem Würfeln berechnet hat.
+      required:
+        - figureId
+        - fromPosition
+        - toPosition
+        - capturesOpponent
+      properties:
+        figureId:
+          type: integer
+          minimum: 0
+          maximum: 15
+          example: 5
+        fromPosition:
+          type: integer
+          minimum: -1
+          maximum: 56
+          example: -1
+        toPosition:
+          type: integer
+          minimum: 0
+          maximum: 56
+          example: 0
+        capturesOpponent:
+          type: boolean
+          description: Ob dieser Zug eine gegnerische Figur schlägt.
+          example: false
+
+    DiceRollResult:
+      type: object
+      description: Ergebnis nach einem Würfelwurf.
+      required:
+        - value
+        - playerId
+        - possibleMoves
+        - hasMoves
+        - rollAgain
+        - consecutiveSixes
+        - turnForfeit
+        - gameState
+      properties:
+        value:
+          type: integer
+          minimum: 1
+          maximum: 6
+          description: Gewürfelter Wert.
+          example: 6
+        playerId:
+          type: string
+          format: uuid
+        possibleMoves:
+          type: array
+          description: |
+            Alle gültigen Züge nach diesem Wurf.
+            Leer wenn kein Zug möglich (Runde wird automatisch weitergegeben).
+          items:
+            $ref: '#/components/schemas/PossibleMove'
+        hasMoves:
+          type: boolean
+          description: |
+            Komfort-Flag. False = kein gültiger Zug;
+            Server gibt Runde automatisch weiter.
+          example: true
+        rollAgain:
+          type: boolean
+          description: |
+            True wenn nochmal gewürfelt werden darf
+            (z.B. 6 gewürfelt bei aktiver THROW_AGAIN_ON_6 Regel).
+          example: true
+        consecutiveSixes:
+          type: integer
+          minimum: 0
+          maximum: 3
+          description: Aktualisierter Zähler aufeinanderfolgender Sechser.
+          example: 1
+        turnForfeit:
+          type: boolean
+          description: |
+            True wenn THREE_SIXES_LOSE_TURN ausgelöst wurde:
+            3× Sechs → Zug verfällt, nächster Spieler ist bereits gesetzt.
+          example: false
+        gameState:
+          $ref: '#/components/schemas/GameState'
+
+    MoveRequest:
+      type: object
+      description: Anfrage zum Bewegen einer Figur.
+      required:
+        - playerId
+        - figureId
+        - targetFieldId
+      properties:
+        playerId:
+          type: string
+          format: uuid
+          description: ID des ziehenden Spielers (muss dem JWT-Benutzer entsprechen).
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        figureId:
+          type: integer
+          minimum: 0
+          maximum: 15
+          description: Globale Figuren-ID. Muss in der `possibleMoves`-Liste sein.
+          example: 5
+        targetFieldId:
+          type: integer
+          minimum: 0
+          maximum: 79
+          description: |
+            Zielfeld-ID. Server validiert ob das zum gewürfelten Wert passt.
+            0–39 = Hauptfeld, 40–55 = Zielgerade, 56–79 = reserviert.
+          example: 0
+
+    CapturedFigure:
+      type: object
+      description: Info über eine geschlagene gegnerische Figur.
+      required:
+        - figureId
+        - ownerPlayerId
+        - previousPosition
+      properties:
+        figureId:
+          type: integer
+          minimum: 0
+          maximum: 15
+          example: 11
+        ownerPlayerId:
+          type: string
+          format: uuid
+        previousPosition:
+          type: integer
+          example: 14
+
+    MoveResult:
+      type: object
+      description: Ergebnis nach dem Bewegen einer Figur.
+      required:
+        - outcome
+        - figureId
+        - fromPosition
+        - toPosition
+        - gameState
+      properties:
+        outcome:
+          $ref: '#/components/schemas/MoveOutcome'
+        figureId:
+          type: integer
+          minimum: 0
+          maximum: 15
+          example: 5
+        fromPosition:
+          type: integer
+          example: -1
+        toPosition:
+          type: integer
+          example: 0
+        capturedFigure:
+          nullable: true
+          description: Nur vorhanden wenn `outcome` = CAPTURED.
+          allOf:
+            - $ref: '#/components/schemas/CapturedFigure'
+        gameState:
+          $ref: '#/components/schemas/GameState'
+
+    CreateSessionRequest:
+      type: object
+      required:
+        - hostId
+        - settings
+      properties:
+        hostId:
+          type: string
+          format: uuid
+          description: Spieler-ID des Hosts (muss dem JWT-Benutzer entsprechen).
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        settings:
+          $ref: '#/components/schemas/LobbySettings'
+
+    JoinGameRequest:
+      type: object
+      required:
+        - playerId
+      properties:
+        playerId:
+          type: string
+          format: uuid
+          description: ID des beitretenden Spielers.
+          example: "660e8400-e29b-41d4-a716-446655440111"
+        preferredColor:
+          description: >
+            Gewünschte Farbe. Server weist sie zu wenn verfügbar,
+            sonst wird die nächste freie Farbe vergeben.
+          allOf:
+            - $ref: '#/components/schemas/PlayerColor'
+        inviteToken:
+          ***ENTFERNT*** string
+          description: >
+            Pflicht beim Beitreten eines privaten Spiels (isPrivate = true).
+          example: "inv_a8f3c2"
+
+    GameResults:
+      type: object
+      description: Spielergebnis für den Auswertungsbildschirm.
+      required:
+        - sessionId
+        - placements
+        - finishedAt
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+        placements:
+          type: array
+          description: Spieler sortiert nach Platzierung (1 = Gewinner).
+          items:
+            type: object
+            required:
+              - rank
+              - playerId
+              - username
+              - color
+              - figuresInGoal
+            properties:
+              rank:
+                type: integer
+                minimum: 1
+                maximum: 4
+                example: 1
+              playerId:
+                type: string
+                format: uuid
+              username:
+                type: string
+                example: "CoolPlayer42"
+              color:
+                $ref: '#/components/schemas/PlayerColor'
+              figuresInGoal:
+                type: integer
+                minimum: 0
+                maximum: 4
+                example: 4
+              figuresCaptured:
+                type: integer
+                minimum: 0
+                description: Gegnerische Figuren in diesem Spiel geschlagen.
+                example: 3
+        totalTurns:
+          type: integer
+          example: 87
+        durationSeconds:
+          type: integer
+          description: Spieldauer in Sekunden.
+          example: 1240
+        finishedAt:
+          type: string
+          format: date-time
+
+    GameHistoryEvent:
+      type: object
+      description: Ein einzelnes aufgezeichnetes Ereignis im Spielverlauf.
+      required:
+        - eventId
+        - timestamp
+        - playerId
+        - actionType
+      properties:
+        eventId:
+          type: integer
+          minimum: 1
+          example: 34
+        timestamp:
+          type: string
+          format: date-time
+        playerId:
+          type: string
+          format: uuid
+        actionType:
+          $ref: '#/components/schemas/GameHistoryActionType'
+        diceValue:
+          type: integer
+          minimum: 1
+          maximum: 6
+          nullable: true
+        figureId:
+          type: integer
+          minimum: 0
+          maximum: 15
+          nullable: true
+        fromPosition:
+          type: integer
+          nullable: true
+        toPosition:
+          type: integer
+          nullable: true
+        outcome:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/MoveOutcome'
+
+    PaginatedSessionList:
+      type: object
+      required:
+        - sessions
+        - totalCount
+        - page
+        - size
+      properties:
+        sessions:
+          type: array
+          items:
+            $ref: '#/components/schemas/SessionSummary'
+        totalCount:
+          type: integer
+          example: 8
+        page:
+          type: integer
+          example: 0
+        size:
+          type: integer
+          example: 20
+
+
+  # ── Wiederverwendbare Responses ────────────────────────────────────────
+  responses:
+
+    BadRequest:
+      description: Validierungsfehler (400).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            status: error
+            code: VALIDATION_ERROR
+            message: "numberOfPlayers muss zwischen 2 und 4 liegen."
+            timestamp: "2026-06-01T12:00:00Z"
+
+    Unauthorized:
+      description: Token fehlt, abgelaufen oder ungültig (401).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            status: error
+            code: UNAUTHORIZED
+            message: "Fehlender oder ungültiger Authorization-Token."
+            timestamp: "2026-06-01T12:00:00Z"
+
+    Forbidden:
+      description: Authentifiziert, aber keine Berechtigung (403).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            status: error
+            code: FORBIDDEN
+            message: "Nur der Host darf diese Aktion ausführen."
+            timestamp: "2026-06-01T12:00:00Z"
+
+    NotFound:
+      description: Ressource nicht gefunden (404).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            status: error
+            code: NOT_FOUND
+            message: "Session nicht gefunden."
+            timestamp: "2026-06-01T12:00:00Z"
+
+    Conflict:
+      description: Operation im aktuellen Zustand nicht möglich (409).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            status: error
+            code: GAME_ALREADY_STARTED
+            message: "Spiel ist bereits gestartet."
+            timestamp: "2026-06-01T12:00:00Z"
+
+    TooManyRequests:
+      description: Rate-Limit überschritten (429).
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Sekunden bis zum nächsten erlaubten Versuch.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            status: error
+            code: RATE_LIMIT_EXCEEDED
+            message: "Zu viele Anfragen. Bitte warten."
+            timestamp: "2026-06-01T12:00:00Z"
+
+    InternalServerError:
+      description: Interner Serverfehler (500).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            status: error
+            code: INTERNAL_ERROR
+            message: "Ein unerwarteter Fehler ist aufgetreten."
+            timestamp: "2026-06-01T12:00:00Z"
+
+# ===========================================================================
+# Paths – 31 Endpunkte für das MVP
+# ===========================================================================
+paths:
+
+  # ── Auth (4 Endpunkte) ──────────────────────────────────────────────────
+
+  /auth/oauth:
+    get:
+      tags: [Auth]
+      summary: OIDC-Login initiieren
+      operationId: initiateOAuth
+      description: Leitet den Browser zur Keycloak-Consent-Seite weiter.
+      security: []
+      responses:
+        "302":
+          description: Weiterleitung zu Keycloak
+          headers:
+            Location:
+              schema:
+                type: string
+                format: uri
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/oauth/callback:
+    get:
+      tags: [Auth]
+      summary: OIDC-Callback verarbeiten
+      operationId: handleOAuthCallback
+      description: Verarbeitet den Authorization-Code von Keycloak, tauscht ihn gegen Tokens und stellt ein Session-Cookie aus.
+      security: []
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: state
+          in: query
+          schema:
+            type: string
+      responses:
+        "302":
+          description: Weiterleitung zur App nach erfolgreichem Login
+          headers:
+            Location:
+              schema:
+                type: string
+            Set-Cookie:
+              schema:
+                type: string
+                example: "session=<token>; HttpOnly; SameSite=Lax"
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/session:
+    get:
+      tags: [Auth]
+      summary: Aktuellen Session-Benutzer abrufen
+      operationId: getSession
+      responses:
+        "200":
+          description: Aktuell angemeldeter Benutzer.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/SessionUser'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Session beenden
+      operationId: logout
+      responses:
+        "204":
+          description: Abgemeldet. Session ungültig, Cookie gelöscht.
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+                example: "session=; Max-Age=0; HttpOnly"
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+
+  # ── Users (2 Endpunkte) ─────────────────────────────────────────────────
+
+  /users/{userId}:
+    get:
+      tags: [Users]
+      summary: Benutzerprofil abrufen
+      operationId: getUserProfile
+      description: Liefert das Profil eines Benutzers (einschließlich des eigenen Profils).
+      parameters:
+        - $ref: '#/components/parameters/userIdPath'
+      responses:
+        '200':
+          description: Benutzerprofil geladen.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PlayerProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /users/{userId}/stats:
+    get:
+      tags: [Users]
+      summary: Spielstatistiken eines Benutzers
+      operationId: getUserStats
+      description: Liefert die Spielstatistiken eines Benutzers.
+      parameters:
+        - $ref: '#/components/parameters/userIdPath'
+      responses:
+        '200':
+          description: Statistiken geladen.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PlayerStats'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # ── Sessions (5 Endpunkte) ──────────────────────────────────────────────
+
+  /sessions:
+    get:
+      tags: [Sessions]
+      summary: Öffentliche Sessions auflisten (Lobby-Browser)
+      description: |
+        Liefert eine paginierte Liste öffentlicher Sessions im Status WAITING.
+        Private Sessions (isPrivate = true) sind ausgeschlossen.
+      operationId: listSessions
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/GameStatus'
+          description: Nach Status filtern.
+        - $ref: '#/components/parameters/pageQuery'
+        - $ref: '#/components/parameters/sizeQuery'
+      responses:
+        '200':
+          description: Paginierte Session-Liste.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PaginatedSessionList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      tags: [Sessions]
+      summary: Neue Session erstellen
+      description: |
+        Erstellt eine neue Spielsession. Der anfragende Spieler wird Host.
+        Die Session startet im Status WAITING.
+      operationId: createSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSessionRequest'
+            example:
+              hostId: "550e8400-e29b-41d4-a716-446655440000"
+              settings:
+                numberOfPlayers: 4
+                mode: CLASSIC
+                boardTheme: CLASSIC
+                isPrivate: false
+                turnTimeLimitSeconds: null
+                additionalRules: ["THROW_AGAIN_ON_6", "THREE_SIXES_LOSE_TURN"]
+      responses:
+        '201':
+          description: Session erstellt.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Lobby'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /sessions/{id}:
+    get:
+      tags: [Sessions]
+      summary: Session-Details abrufen
+      description: Liefert den vollständigen GameState. Funktioniert in jedem Status.
+      operationId: getSession
+      parameters:
+        - $ref: '#/components/parameters/sessionIdPath'
+      responses:
+        '200':
+          description: GameState geladen.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                example: "max-age=1"
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/GameState'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags: [Sessions]
+      summary: Session löschen
+      description: |
+        Nur der Host darf löschen; nur im Status WAITING.
+      operationId: deleteSession
+      parameters:
+        - $ref: '#/components/parameters/sessionIdPath'
+      responses:
+        '204':
+          description: Session gelöscht.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /sessions/{id}/start:
+    post:
+      tags: [Sessions]
+      summary: Spiel starten
+      description: |
+        WAITING → IN_PROGRESS. Voraussetzungen:
+        - Aufrufer ist Host
+        - Mind. 2 Spieler in der Lobby
+        - Status ist WAITING
+
+        Reihenfolge wird zufällig festgelegt.
+      operationId: startSession
+      parameters:
+        - $ref: '#/components/parameters/sessionIdPath'
+      responses:
+        '200':
+          description: Spiel gestartet. Initialer GameState.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/GameState'
+        '400':
+          description: Nicht genügend Spieler.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: error
+                code: NOT_ENOUGH_PLAYERS
+                message: "Mindestens 2 Spieler werden benötigt."
+                timestamp: "2026-06-01T12:00:00Z"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+
+  # ── Lobby (6 Endpunkte) ─────────────────────────────────────────────────
+
+  /sessions/{id}/lobby:
+    get:
+      tags: [Lobby]
+      summary: Lobby-Details abrufen
+      description: Nur verfügbar im Status WAITING.
+      operationId: getLobby
+      parameters:
+        - $ref: '#/components/parameters/sessionIdPath'
+      responses:
+        '200':
+          description: Lobby geladen.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Lobby'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Spiel ist nicht mehr im WAITING-Status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    put:
+      tags: [Lobby]
+      summary: Lobby-Einstellungen ändern (nur Host)
+      description: Nur im Status WAITING möglich.
+      operationId: updateLobbySettings
+      parameters:
+        - $ref: '#/components/parameters/sessionIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LobbySettings'
+      responses:
+        '200':
+          description: Einstellungen aktualisiert.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Lobby'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /sessions/{id}/players:
+    get:
+      tags: [Lobby]
+      summary: Spielerliste einer Session
+      operationId: getSessionPlayers
+      parameters:
+        - $ref: '#/components/parameters/sessionIdPath'
+      responses:
+        '200':
+          description: Spielerliste geladen.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Player'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /sessions/{id}/join:
+    post:
+      tags: [Lobby]
+      summary: Session beitreten
+      description: |
+        Voraussetzungen:
+        - Status WAITING
+        - Lobby nicht voll
+        - Spieler nicht bereits in der Session
+        - Bei privater Session: gültiger inviteToken nötig
+      operationId: joinSession
+      parameters:
+        - $ref: '#/components/parameters/sessionIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JoinGameRequest'
+      responses:
+        '200':
+          description: Erfolgreich beigetreten.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Lobby'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Ungültiger Einladungstoken bei privater Session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: error
+                code: INVALID_INVITE_TOKEN
+                message: "Einladungstoken ungültig oder abgelaufen."
+                timestamp: "2026-06-01T12:00:00Z"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Lobby voll, Spiel gestartet oder Spieler bereits dabei.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                full:
+                  summary: Lobby voll
+                  value:
+                    status: error
+                    code: LOBBY_FULL
+                    message: "Session ist bereits voll (4/4 Spieler)."
+                    timestamp: "2026-06-01T12:00:00Z"
+                started:
+                  summary: Bereits gestartet
+                  value:
+                    status: error
+                    code: GAME_ALREADY_STARTED
+                    message: "Einem laufenden Spiel kann nicht beigetreten werden."
+                    timestamp: "2026-06-01T12:00:00Z"
+                duplicate:
+                  summary: Bereits dabei
+                  value:
+                    status: error
+                    code: PLAYER_ALREADY_IN_GAME
+                    message: "Spieler ist bereits Teil dieser Session."
+                    timestamp: "2026-06-01T12:00:00Z"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /sessions/{id}/leave:
+    delete:
+      tags: [Lobby]
+      summary: Session verlassen
+      description: |
+        Entfernt den Spieler aus der Session.
+        Die Identität wird aus dem Bearer-Token abgeleitet (sub-Claim).
+
+        **WAITING:** Spieler wird aus der Lobby entfernt.
+        Wenn der Host die Session verlässt und andere Spieler da sind,
+        wird der Host an den ältesten verbleibenden Spieler übergeben.
+        Ist der Host der letzte Spieler, wird die Lobby gelöscht.
+
+        **IN_PROGRESS:** Spieler-Slot wird für Reconnect reserviert.
+        Kehrt der Spieler nicht innerhalb von 60 Sekunden zurück,
+        wird der Slot freigegeben.
+      operationId: leaveSession
+      parameters:
+        - $ref: '#/components/parameters/sessionIdPath'
+      responses:
+        '200':
+          description: Session verlassen.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/GameState'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /sessions/{id}/invite:
+    post:
+      tags: [Lobby]
+      summary: Einladungslink generieren
+      description: |
+        Erstellt einen kurzlebigen Token zum Teilen mit Freunden.
+        Nur der Host darf Links generieren.
+        Jeder Aufruf invalidiert vorherige Tokens für diese Session.
+      operationId: generateInvite
+      parameters:
+        - $ref: '#/components/parameters/sessionIdPath'
+      responses:
+        '200':
+          description: Token generiert.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        required:
+                          - inviteToken
+                          - inviteUrl
+                          - expiresAt
+                        properties:
+                          inviteToken:
+                            ***ENTFERNT*** string
+                            example: "inv_a8f3c2"
+                          inviteUrl:
+                            type: string
+                            format: uri
+                            example: "https://app.ludo-game.example.com/join?token=inv_a8f3c2"
+                          expiresAt:
+                            type: string
+                            format: date-time
+                            example: "2026-06-01T15:00:00Z"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Session nicht im WAITING-Status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # ── Gameplay (5 Endpunkte) ──────────────────────────────────────────────
+
+  /sessions/{id}/rolls:
+    post:
+      tags: [Gameplay]
+      summary: Würfeln
+      description: |
+        Der Spieler würfelt in seiner Runde.
+
+        **Server-Validierung:**
+        - Spiel muss IN_PROGRESS sein
+        - Spieler muss an der Reihe sein
+        - Spieler darf noch nicht gewürfelt haben (außer rollAgain war gesetzt)
+
+        **Automatische Runden-Weitergabe:**
+        - `hasMoves = false` → Server gibt automatisch weiter
+        - `turnForfeit = true` → 3× Sechs, Zug verfällt
+      operationId: rollDice
+      parameters:
+        - $ref: '#/components/parameters/sessionIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - playerId
+              properties:
+                playerId:
+                  type: string
+                  format: uuid
+                  example: "550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        '200':
+          description: Gewürfelt. Mögliche Züge und aktualisierter GameState.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/DiceRollResult'
+        '400':
+          description: Nicht an der Reihe, falscher Status oder bereits gewürfelt.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                wrongTurn:
+                  summary: Nicht an der Reihe
+                  value:
+                    status: error
+                    code: NOT_YOUR_TURN
+                    message: "Du bist nicht an der Reihe. Aktueller Spieler ist BLAU."
+                    timestamp: "2026-06-01T12:00:00Z"
+                alreadyRolled:
+                  summary: Bereits gewürfelt
+                  value:
+                    status: error
+                    code: DICE_ALREADY_ROLLED
+                    message: "Du hast bereits gewürfelt. Bitte bewege eine Figur."
+                    timestamp: "2026-06-01T12:00:00Z"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Spiel nicht im IN_PROGRESS-Status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: error
+                code: GAME_NOT_IN_PROGRESS
+                message: "Spiel läuft nicht."
+                timestamp: "2026-06-01T12:00:00Z"
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /sessions/{id}/moves:
+    post:
+      tags: [Gameplay]
+      summary: Figur bewegen
+      description: |
+        Bewegt die gewählte Figur basierend auf dem letzten Würfelwurf.
+
+        **Server-Validierung:**
+        - Spiel muss IN_PROGRESS sein
+        - Spieler muss in dieser Runde gewürfelt haben
+        - figureId und targetFieldId müssen einem gültigen Zug aus `possibleMoves` entsprechen
+
+        **Spielregeln:**
+        - HOME-Figur kann nur bei einer 6 raus
+        - Auf gegnerischer Figur landen → diese wird nach HOME zurückgesetzt
+        - Zieleinlauf nur exakt (kein Überschießen)
+        - Nach gültigem Zug wird die Runde weitergegeben (außer rollAgain war gesetzt)
+        - Letzte Figur im Ziel → `FINISHED`, `winnerId` wird gesetzt
+      operationId: createMove
+      parameters:
+        - $ref: '#/components/parameters/sessionIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MoveRequest'
+      responses:
+        '200':
+          description: Figur bewegt. Ergebnis und aktualisierter GameState.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/MoveResult'
+        '400':
+          description: Ungültiger Zug.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                noDiceRoll:
+                  summary: Noch nicht gewürfelt
+                  value:
+                    status: error
+                    code: DICE_NOT_ROLLED
+                    message: "Du musst erst würfeln bevor du ziehen kannst."
+                    timestamp: "2026-06-01T12:00:00Z"
+                invalidFigure:
+                  summary: Figur nicht in possibleMoves
+                  value:
+                    status: error
+                    code: INVALID_MOVE
+                    message: "Figur 7 ist nicht in der Liste der möglichen Züge."
+                    timestamp: "2026-06-01T12:00:00Z"
+                homeRule:
+                  summary: HOME-Regel verletzt
+                  value:
+                    status: error
+                    code: INVALID_MOVE
+                    message: "Eine Figur kann nur bei einer 6 das Startfeld betreten."
+                    timestamp: "2026-06-01T12:00:00Z"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+
+  /sessions/{id}/possible-moves:
+    get:
+      tags: [Gameplay]
+      summary: Mögliche Züge abrufen
+      description: |
+        Liefert alle gültigen Züge für den aktuellen Spieler basierend auf dem letzten Wurf.
+        Muss nach dem Würfeln und vor dem Ziehen aufgerufen werden.
+        Nützlich um im Frontend Figuren hervorzuheben ohne erneut zu würfeln.
+      operationId: getPossibleMoves
+      parameters:
+        - $ref: '#/components/parameters/sessionIdPath'
+        - name: playerId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID des anfragenden Spielers.
+      responses:
+        '200':
+          description: Mögliche Züge.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        required:
+                          - possibleMoves
+                          - diceValue
+                        properties:
+                          diceValue:
+                            type: integer
+                            minimum: 1
+                            maximum: 6
+                            example: 4
+                          possibleMoves:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/PossibleMove'
+        '400':
+          description: Noch nicht gewürfelt.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: error
+                code: DICE_NOT_ROLLED
+                message: "Es wurde noch nicht gewürfelt. Zuerst POST /rolls aufrufen."
+                timestamp: "2026-06-01T12:00:00Z"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /sessions/{id}/results:
+    get:
+      tags: [Gameplay]
+      summary: Spielergebnis und Platzierungen
+      description: |
+        Liefert das Endergebnis mit Platzierungen, geschlagenen Figuren pro Spieler,
+        Gesamtrundenanzahl und Spieldauer.
+        Nur verfügbar wenn der Status FINISHED ist.
+      operationId: getSessionResults
+      parameters:
+        - $ref: '#/components/parameters/sessionIdPath'
+      responses:
+        '200':
+          description: Spielergebnis.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/GameResults'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Spiel noch nicht beendet.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: error
+                code: GAME_NOT_FINISHED
+                message: "Ergebnisse sind erst nach Spielende verfügbar."
+                timestamp: "2026-06-01T12:00:00Z"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /sessions/{id}/history:
+    get:
+      tags: [Gameplay]
+      summary: Spielverlauf (Move History)
+      description: |
+        Liefert die vollständige Liste aller aufgezeichneten Ereignisse einer Session.
+        Chronologisch sortiert (älteste zuerst).
+        In jedem Status verfügbar.
+      operationId: getSessionHistory
+      parameters:
+        - $ref: '#/components/parameters/sessionIdPath'
+      responses:
+        '200':
+          description: Spielverlauf.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/GameHistoryEvent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  # ── Realtime (1 Endpunkt) ──────────────────────────────────────────────
+
+  /sessions/{id}/live:
+    get:
+      tags: [Realtime]
+      summary: Echtzeit-Verbindung (SSE)
+      description: |
+        Baut eine persistente Verbindung für Live-Updates des Spielstands via Server-Sent Events (SSE) auf.
+
+        Header: "Accept: text/event-stream"
+
+        Vier Event-Typen im MVP:
+        - `game_started`  – Spiel gestartet (WAITING → IN_PROGRESS), voller GameState
+        - `move_executed`  – Figur bewegt, MoveResult im data-Feld
+        - `turn_changed`   – Nächster Spieler ist dran, currentPlayerId + turnNumber
+        - `game_ended`     – Gewinner ermittelt, GameResults im data-Feld
+
+        ### Reconnect
+        Bei Neuverbindung sendet der Server sofort den vollständigen aktuellen GameState.
+      operationId: liveGameStream
+      parameters:
+        - $ref: '#/components/parameters/sessionIdPath'
+      responses:
+        '200':
+          description: SSE-Verbindung aufgebaut. Stream der Spielereignisse.
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: Zeilengetrennte SSE-Events.
+              example: |
+                event: game_started
+                data: {"sessionId":"a3bb...","status":"IN_PROGRESS","currentPlayerId":"550e..."}
+
+                event: move_executed
+                data: {"outcome":"CAPTURED","figureId":5,"fromPosition":8,"toPosition":14}
+
+                event: turn_changed
+                data: {"currentPlayerId":"660e...","turnNumber":8}
+
+                event: game_ended
+                data: {"winnerId":"550e...","finishedAt":"2026-06-01T15:00:00Z"}
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
