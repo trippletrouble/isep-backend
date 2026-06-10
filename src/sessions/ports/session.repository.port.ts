@@ -11,4 +11,14 @@ export abstract class SessionRepositoryPort {
   abstract findByIdMinimal(id: string): Promise<Session | null>;
   abstract findUserById(id: string): Promise<User | null>;
   abstract findGameStateById(id: string): Promise<GameStateType | null>;
+  abstract updateAfterDiceRoll(
+    sessionId: string,
+    data: {
+      lastDiceValue: number;
+      diceRolledThisTurn: boolean;
+      consecutiveSixes: number;
+    },
+  ): Promise<void>;
+
+  abstract passTurn(sessionId: string, currentPlayerId: string): Promise<void>;
 }
