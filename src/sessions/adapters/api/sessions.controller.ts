@@ -40,7 +40,6 @@ import {
   NotEnoughPlayersError,
   NotHostError,
   SessionNotFoundError,
-  DiceAlreadyRolledError,
   NotYourTurnError,
 } from '../../application/use-cases/errors';
 
@@ -49,7 +48,6 @@ export class SessionsController {
   constructor(
     private readonly createSessionUseCase: CreateSessionUseCase,
     private readonly listOpenSessionsUseCase: ListOpenSessionsUseCase,
-    private readonly rollDiceUseCase: RollDiceUseCase,
     private readonly startSessionUseCase: StartSessionUseCase,
     private readonly getGameStateUseCase: GetGameStateUseCase,
     private readonly rollDiceUseCase: RollDiceUseCase,
