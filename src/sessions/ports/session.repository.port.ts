@@ -14,6 +14,7 @@ export abstract class SessionRepositoryPort {
   abstract findByIdMinimal(id: string): Promise<Session | null>;
   abstract findUserById(id: string): Promise<User | null>;
   abstract findGameStateById(id: string): Promise<GameStateType | null>;
+  abstract findGameStateById(id: string): Promise<GameStateType | null>;
   abstract updateAfterDiceRoll(
     sessionId: string,
     data: {
@@ -31,4 +32,8 @@ export abstract class SessionRepositoryPort {
   abstract createParticipant(
     participant: ParticipantDto,
   ): Promise<GameParticipant | null>;
+  abstract findOpenPublicSessions(
+    page: number,
+    size: number,
+  ): Promise<{ items: Session[]; total: number }>;
 }

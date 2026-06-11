@@ -1,10 +1,9 @@
 import { Module } from '@nestjs/common';
 import { PrismaModule } from '../prisma/prisma.module';
-//import { Session, GameParticipant, LobbySettings } from './domain/model';
 import { SessionRepositoryPort } from './ports';
 import { PrismaSessionRepository } from './adapters';
 import { SessionsController } from './adapters';
-import { CreateSessionUseCase } from './application';
+import { CreateSessionUseCase, ListOpenSessionsUseCase } from './application';
 import { AuthModule } from '../auth/auth.module';
 import { GetGameStateUseCase } from './application/use-cases/get-game-state.use-case';
 import { RollDiceUseCase } from './application/use-cases/roll-dice.use-case';
@@ -19,7 +18,9 @@ import { ConfigModule } from '@nestjs/config';
   controllers: [SessionsController],
   providers: [
     CreateSessionUseCase,
+    GetGameStateUseCase,
     StartSessionUseCase,
+    ListOpenSessionsUseCase,
     GetGameStateUseCase,
     RollDiceUseCase,
     PossibleMoveCalculatorUseCase,
@@ -35,8 +36,9 @@ import { ConfigModule } from '@nestjs/config';
   ],
   exports: [
     SessionRepositoryPort,
-    CreateSessionUseCase,
     StartSessionUseCase,
+    CreateSessionUseCase,
+    ListOpenSessionsUseCase,
     RollDiceUseCase,
   ],
 })

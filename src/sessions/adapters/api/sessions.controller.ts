@@ -7,42 +7,44 @@ import {
   Get,
   HttpCode,
   HttpException,
+  Query,
   ForbiddenException,
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
-import { CreateSessionUseCase } from '../../application/use-cases/create-session.use-case';
-import { CreateSessionRequestDto } from '../../application/dtos/create-session.request.dto';
+import {
+  CreateSessionUseCase,
+  ListOpenSessionsUseCase,
+  ListSessionsRequestDto,
+} from '../../application';
+import { CreateSessionRequestDto } from '../../application';
 import { SessionGuard } from '../../../auth/guards/session.guard';
 import { AuthService } from '../../../auth/application/auth.service';
 import { CurrentUser } from '../../../auth/decorators/current-user.decorator';
 import { User } from '../../../generated/prisma-class/user';
-import {
-  InvalidSessionStatusError,
-  NotEnoughPlayersError,
-  NotHostError,
-  SessionNotFoundError,
-  StartSessionUseCase,
-} from '../../application/use-cases/start-session.use-case';
+import { StartSessionUseCase } from '../../application/use-cases/start-session.use-case';
 import { GetGameStateUseCase } from '../../application/use-cases/get-game-state.use-case';
 import { GameStateType } from '../../application/use-cases/types/game-state.type';
 import { DiceRollResultType } from '../../application/use-cases/types/dice-roll-result.type';
 import { RollDiceRequestType } from '../../application/use-cases/types/dice-roll-request.type';
 import { RollDiceUseCase } from '../../application/use-cases/roll-dice.use-case';
 import {
-  DiceAlreadyRolledError,
   InvalidSessionStatusError,
-  NotYourTurnError,
+  NotEnoughPlayersError,
+  NotHostError,
   SessionNotFoundError,
+  DiceAlreadyRolledError,
+  NotYourTurnError,
 } from '../../application/use-cases/errors';
 
 @Controller('sessions')
 export class SessionsController {
   constructor(
     private readonly createSessionUseCase: CreateSessionUseCase,
-    private readonly getGameStateUseCase: GetGameStateUseCase,
+    private readonly listOpenSessionsUseCase: ListOpenSessionsUseCase,
     private readonly rollDiceUseCase: RollDiceUseCase,
     private readonly startSessionUseCase: StartSessionUseCase,
+    private readonly getGameStateUseCase: GetGameStateUseCase,
     private readonly authService: AuthService,
   ) {}
   @Get(':id')
@@ -102,6 +104,10 @@ export class SessionsController {
     @CurrentUser() user: User,
   ) {
     return this.createSessionUseCase.execute(user.id, request.settings);
+  }
+  @Get()
+  async listOpenSessions(@Query() query: ListSessionsRequestDto) {
+    return this.listOpenSessionsUseCase.execute(query.page, query.size);
   }
   @Post(':id/start')
   @HttpCode(200)

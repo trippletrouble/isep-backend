@@ -1,14 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import {
   CreateUserDto,
-  IUserRepository,
+  UserRepositoryPort,
 } from '../../ports/user-repository.port';
 import { User } from '../../../generated/prisma-class/user';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { UserRole } from '../../../generated/prisma-client/enums';
 
 @Injectable()
-export class PrismaUserRepository implements IUserRepository {
+export class PrismaUserRepository implements UserRepositoryPort {
   constructor(private readonly prisma: PrismaService) {}
 
   async findById(id: string): Promise<User | null> {
