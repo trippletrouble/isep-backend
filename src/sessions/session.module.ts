@@ -15,6 +15,7 @@ import { StartSessionUseCase } from './application/use-cases/start-session.use-c
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
 
+export class AppModule {}
 @Module({
   imports: [
     PrismaModule,
@@ -23,7 +24,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
     ThrottlerModule.forRoot([
       {
         ttl: 10 * 60 * 1000,
-        limit: 3,
+        limit: 1000,
       },
     ]),
   ],
