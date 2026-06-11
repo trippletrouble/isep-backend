@@ -7,16 +7,16 @@ import { PossibleMoveType } from './types/possible-move.type';
 
 const START_FIELDS = {
   RED: 0,
-  BLUE: 10,
-  GREEN: 20,
-  YELLOW: 30,
+  BLUE: 15,
+  GREEN: 30,
+  YELLOW: 45,
 } as const;
 
 const GOAL_START_FIELDS = {
-  RED: 40,
-  BLUE: 44,
-  GREEN: 48,
-  YELLOW: 52,
+  RED: 56,
+  BLUE: 71,
+  GREEN: 86,
+  YELLOW: 101,
 } as const;
 
 @Injectable()
