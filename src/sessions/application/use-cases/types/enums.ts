@@ -1,3 +1,3 @@
-enum Postition {
+export enum Position {
   Home = -1,
 }

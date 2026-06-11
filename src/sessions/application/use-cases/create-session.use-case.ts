@@ -4,7 +4,7 @@ import { LobbySettings } from '../../domain';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { PlayerColor, Session } from '../../../generated/prisma-client/client';
 import { ParticipantDto } from '../dtos/participant.dto';
-import { PlayerType } from '@prisma/client';
+import { PlayerType } from '../../../generated/prisma-client/client';
 
 @Injectable()
 export class CreateSessionUseCase {

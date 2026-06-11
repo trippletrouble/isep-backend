@@ -3,7 +3,7 @@ import { PieceStatus } from '@prisma/client';
 import { SessionRepositoryPort } from '../../ports';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { User } from '../../../generated/prisma-class/user';
-import { StartSessionInfoType } from './types';
+import { Position, StartSessionInfoType } from './types';
 import {
   InvalidSessionStatusError,
   NotEnoughPlayersError,
@@ -68,7 +68,7 @@ export class StartSessionUseCase {
           id: playerIndex * 4 + (figureIndex + 1),
           sessionId: sessionId,
           participantId: participant.id,
-          position: Postition.Home,
+          position: Position.Home,
           status: PieceStatus.HOME,
         });
       }
