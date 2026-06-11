@@ -381,7 +381,7 @@ export class PrismaSessionRepository implements SessionRepositoryPort {
       });
     });
   }
-  async findSessionById(id: string): Promise<Session | null> {
+  async findSessionById(id: string): Promise<SessionWithParticipants | null> {
     return this.prisma.session.findUnique({
       where: { id },
       include: {
