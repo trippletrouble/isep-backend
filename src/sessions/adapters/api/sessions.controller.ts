@@ -7,9 +7,14 @@ import {
   HttpException,
   Param,
   Get,
+  Query,
 } from '@nestjs/common';
-import { CreateSessionUseCase } from '../../application/use-cases/create-session.use-case';
-import { CreateSessionRequestDto } from '../../application/dtos/create-session.request.dto';
+import {
+  CreateSessionUseCase,
+  ListOpenSessionsUseCase,
+  ListSessionsRequestDto,
+} from '../../application';
+import { CreateSessionRequestDto } from '../../application';
 import { SessionGuard } from '../../../auth/guards/session.guard';
 import { AuthService } from '../../../auth/application/auth.service';
 import { CurrentUser } from '../../../auth/decorators/current-user.decorator';
@@ -27,6 +32,7 @@ import {
 export class SessionsController {
   constructor(
     private readonly createSessionUseCase: CreateSessionUseCase,
+    private readonly listOpenSessionsUseCase: ListOpenSessionsUseCase,
     private readonly startSessionUseCase: StartSessionUseCase,
     private readonly getGameStateUseCase: GetGameStateUseCase,
     private readonly authService: AuthService,
@@ -46,6 +52,10 @@ export class SessionsController {
     @CurrentUser() user: User,
   ) {
     return this.createSessionUseCase.execute(user.id, request.settings);
+  }
+  @Get()
+  async listOpenSessions(@Query() query: ListSessionsRequestDto) {
+    return this.listOpenSessionsUseCase.execute(query.page, query.size);
   }
   @Post(':id/start')
   @HttpCode(200)
