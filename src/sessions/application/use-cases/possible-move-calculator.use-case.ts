@@ -5,6 +5,13 @@ import { GameStateFigureType } from './types/game-state-figure.type';
 import { GameStateFromPlayerType } from './types/game-state-from-Player.type';
 import { PossibleMoveType } from './types/possible-move.type';
 
+export const FINAL_GOAL_POSITION = 56;
+const MAIN_TRACK_START = 0;
+const MAIN_TRACK_SIZE = 40;
+const MAIN_TRACK_END = MAIN_TRACK_START + MAIN_TRACK_SIZE - 1;
+const GOAL_LANE_SIZE = 4;
+const LAST_GOAL_LANE_INDEX = GOAL_LANE_SIZE - 1;
+
 const START_FIELDS = {
   RED: 0,
   BLUE: 10,
@@ -52,7 +59,7 @@ export class PossibleMoveCalculatorUseCase {
     allFigures: GameStateFigureType[],
     diceValue: number,
   ): PossibleMoveType | null {
-    if (figure.position === 56 || figure.status === 'GOAL') {
+    if (figure.position === FINAL_GOAL_POSITION || figure.status === 'GOAL') {
       return null;
     }
 
@@ -61,7 +68,6 @@ export class PossibleMoveCalculatorUseCase {
       player.color,
       diceValue,
     );
-    console.log('to Position', toPosition);
     if (toPosition === null) {
       return null;
     }
@@ -71,7 +77,7 @@ export class PossibleMoveCalculatorUseCase {
         other.playerId === player.id &&
         other.id !== figure.id &&
         other.position === toPosition &&
-        toPosition !== 56,
+        toPosition !== FINAL_GOAL_POSITION,
     );
 
     if (ownFigureOnTarget) {
@@ -79,8 +85,8 @@ export class PossibleMoveCalculatorUseCase {
     }
 
     const capturesOpponent =
-      toPosition >= 0 &&
-      toPosition <= 39 &&
+      toPosition >= MAIN_TRACK_START &&
+      toPosition <= MAIN_TRACK_END &&
       allFigures.some(
         (other) =>
           other.playerId !== player.id && other.position === toPosition,
@@ -105,37 +111,41 @@ export class PossibleMoveCalculatorUseCase {
     if (fromPosition === -1) {
       return diceValue === 6 ? startField : null;
     }
-    if (fromPosition >= 0 && fromPosition <= 39) {
-      const progressFromStart = (fromPosition - startField + 40) % 40;
+    if (fromPosition >= MAIN_TRACK_START && fromPosition <= MAIN_TRACK_END) {
+      const progressFromStart =
+        (fromPosition - startField + MAIN_TRACK_SIZE) % MAIN_TRACK_SIZE;
       const nextProgress = progressFromStart + diceValue;
 
-      if (nextProgress <= 39) {
-        return (startField + nextProgress) % 40;
+      if (nextProgress <= MAIN_TRACK_END) {
+        return (startField + nextProgress) % MAIN_TRACK_SIZE;
       }
 
-      const goalIndex = nextProgress - 40;
+      const goalIndex = nextProgress - MAIN_TRACK_SIZE;
 
-      if (goalIndex <= 3) {
+      if (goalIndex <= LAST_GOAL_LANE_INDEX) {
         return goalStart + goalIndex;
       }
 
-      if (goalIndex === 4) {
-        return 56;
+      if (goalIndex === GOAL_LANE_SIZE) {
+        return FINAL_GOAL_POSITION;
       }
 
       return null;
     }
 
-    if (fromPosition >= goalStart && fromPosition <= goalStart + 3) {
+    if (
+      fromPosition >= goalStart &&
+      fromPosition <= goalStart + LAST_GOAL_LANE_INDEX
+    ) {
       const goalIndex = fromPosition - goalStart;
       const nextGoalIndex = goalIndex + diceValue;
 
-      if (nextGoalIndex <= 3) {
+      if (nextGoalIndex <= LAST_GOAL_LANE_INDEX) {
         return goalStart + nextGoalIndex;
       }
 
-      if (nextGoalIndex === 4) {
-        return 56;
+      if (nextGoalIndex === GOAL_LANE_SIZE) {
+        return FINAL_GOAL_POSITION;
       }
 
       return null;

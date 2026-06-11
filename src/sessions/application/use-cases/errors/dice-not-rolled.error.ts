@@ -1,6 +1,6 @@
 export class DiceNotRolledError extends Error {
   constructor() {
-    super('Es wurde noch nicht gewürfelt. Zuerst POST /rolls aufrufen.');
+    super('You must roll the dice before moving a figure');
     this.name = 'DiceNotRolledError';
   }
 }

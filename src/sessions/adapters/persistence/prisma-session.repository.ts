@@ -8,10 +8,23 @@ import { GameStateType } from 'src/sessions/application/use-cases/types/game-sta
 import { SessionWithParticipants } from '../../application/use-cases/types';
 import { Prisma } from '@prisma/client';
 import { GameParticipant } from '../../../generated/prisma-class/game_participant';
-
+import { ApplyMoveData } from '../../application/use-cases/types/apply-move-data.type';
 @Injectable()
 export class PrismaSessionRepository implements SessionRepositoryPort {
   constructor(private readonly prisma: PrismaService) {}
+  async findParticipant(
+    sessionId: string,
+    userId: string,
+  ): Promise<GameParticipant | null> {
+    return await this.prisma.gameParticipant.findUnique({
+      where: {
+        sessionId_userId: {
+          sessionId: sessionId,
+          userId: userId,
+        },
+      },
+    });
+  }
   async findGameStateById(id: string): Promise<GameStateType | null> {
     const session = await this.prisma.session.findUnique({
       where: { id },
@@ -135,34 +148,43 @@ export class PrismaSessionRepository implements SessionRepositoryPort {
     });
   }
   async passTurn(sessionId: string, currentPlayerId: string): Promise<void> {
-    const sessionwithParticipants = await this.prisma.session.findUnique({
+    const sessionWithParticipants = await this.prisma.session.findUnique({
       where: { id: sessionId },
-      include: { participants: true },
+      include: {
+        participants: {
+          orderBy: {
+            joinedAt: 'asc',
+          },
+        },
+      },
     });
 
-    if (!sessionwithParticipants) throw new Error('Session not found');
-    const currentPlayerIndex = sessionwithParticipants.participants.findIndex(
-      (p) => p.userId === currentPlayerId,
+    if (!sessionWithParticipants) throw new Error('Session not found');
+
+    const currentPlayerIndex = sessionWithParticipants.participants.findIndex(
+      (participant) => participant.userId === currentPlayerId,
     );
 
-    if (currentPlayerIndex === -1)
+    if (currentPlayerIndex === -1) {
       throw new Error('Current player not found in session');
-    const participants = sessionwithParticipants.participants;
-    const nextPlayerIndex = (currentPlayerIndex + 1) % participants.length;
-    const nextPlayer = participants[nextPlayerIndex];
+    }
+
+    const participants = sessionWithParticipants.participants;
+    const nextPlayer =
+      participants[(currentPlayerIndex + 1) % participants.length];
+
     await this.prisma.$transaction([
       this.prisma.session.update({
         where: { id: sessionId },
         data: {
           currentPlayerId: nextPlayer.userId,
-          turnNumber: sessionwithParticipants.turnNumber + 1,
-          lastDiceValue: null, // Reset für nächsten Zug
+          turnNumber: sessionWithParticipants.turnNumber + 1,
+          lastDiceValue: null,
           diceRolledThisTurn: false,
-          consecutiveSixes: 0, // Reset bei Zugwechsel
+          consecutiveSixes: 0,
           updatedAt: new Date(),
         },
       }),
-      //this.prisma.gameParticipant.findFirst(where: {userId: currentPlayerId})
       this.prisma.gameParticipant.update({
         where: {
           sessionId_userId: {
@@ -170,11 +192,9 @@ export class PrismaSessionRepository implements SessionRepositoryPort {
             userId: currentPlayerId,
           },
         },
-
         data: { isCurrentTurn: false, updatedAt: new Date() },
       }),
       this.prisma.gameParticipant.update({
-        //where: { id: nextPlayer.id },
         where: {
           sessionId_userId: {
             sessionId: sessionId,
@@ -184,6 +204,195 @@ export class PrismaSessionRepository implements SessionRepositoryPort {
         data: { isCurrentTurn: true, updatedAt: new Date() },
       }),
     ]);
+  }
+
+  async applyMove(data: ApplyMoveData): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      const movingFigure = await tx.figure.findUnique({
+        where: {
+          sessionId_id: {
+            sessionId: data.sessionId,
+            id: data.figureId,
+          },
+        },
+        include: {
+          participant: true,
+        },
+      });
+
+      if (!movingFigure) {
+        throw new Error('Figure not found');
+      }
+
+      const status = data.toPosition === 56 ? 'GOAL' : 'ACTIVE';
+
+      await tx.figure.update({
+        where: {
+          sessionId_id: {
+            sessionId: data.sessionId,
+            id: data.figureId,
+          },
+        },
+        data: {
+          position: data.toPosition,
+          status,
+        },
+      });
+
+      if (data.capturedFigureId !== null) {
+        await tx.figure.update({
+          where: {
+            sessionId_id: {
+              sessionId: data.sessionId,
+              id: data.capturedFigureId,
+            },
+          },
+          data: {
+            position: -1,
+            status: 'HOME',
+          },
+        });
+
+        await tx.gameParticipant.update({
+          where: {
+            id: movingFigure.participantId,
+          },
+          data: {
+            figuresCaptured: {
+              increment: 1,
+            },
+          },
+        });
+      }
+
+      if (data.toPosition === 56) {
+        await tx.gameParticipant.update({
+          where: {
+            id: movingFigure.participantId,
+          },
+          data: {
+            figuresInGoal: {
+              increment: 1,
+            },
+            hasFinished: data.outcome === 'GAME_WON',
+          },
+        });
+      }
+
+      const lastEvent = await tx.gameHistoryEvent.aggregate({
+        where: {
+          sessionId: data.sessionId,
+        },
+        _max: {
+          sequenceNr: true,
+        },
+      });
+      const sequenceNr = (lastEvent._max.sequenceNr ?? 0) + 1;
+      const actionType: 'MOVE' | 'CAPTURE' | 'GOAL' =
+        data.outcome === 'CAPTURED'
+          ? 'CAPTURE'
+          : data.outcome === 'GOAL' || data.outcome === 'GAME_WON'
+            ? 'GOAL'
+            : 'MOVE';
+
+      await tx.gameHistoryEvent.create({
+        data: {
+          sequenceNr,
+          sessionId: data.sessionId,
+          participantId: movingFigure.participantId,
+          actionType,
+          diceValue: data.diceValue,
+          figureId: data.figureId,
+          fromPosition: data.fromPosition,
+          toPosition: data.toPosition,
+          outcome: data.outcome,
+        },
+      });
+
+      if (data.outcome === 'GAME_WON') {
+        await tx.session.update({
+          where: { id: data.sessionId },
+          data: {
+            status: 'FINISHED',
+            winnerId: data.userId,
+            finishedAt: new Date(),
+            lastDiceValue: null,
+            diceRolledThisTurn: false,
+            updatedAt: new Date(),
+          },
+        });
+        return;
+      }
+
+      if (data.rollAgain && !data.turnForfeit) {
+        await tx.session.update({
+          where: { id: data.sessionId },
+          data: {
+            lastDiceValue: null,
+            diceRolledThisTurn: false,
+            updatedAt: new Date(),
+          },
+        });
+        return;
+      }
+
+      const sessionWithParticipants = await tx.session.findUnique({
+        where: { id: data.sessionId },
+        include: {
+          participants: {
+            orderBy: {
+              joinedAt: 'asc',
+            },
+          },
+        },
+      });
+
+      if (!sessionWithParticipants) {
+        throw new Error('Session not found');
+      }
+
+      const currentPlayerIndex = sessionWithParticipants.participants.findIndex(
+        (participant) => participant.userId === data.userId,
+      );
+
+      if (currentPlayerIndex === -1) {
+        throw new Error('Current player not found in session');
+      }
+
+      const participants = sessionWithParticipants.participants;
+      const nextPlayer =
+        participants[(currentPlayerIndex + 1) % participants.length];
+
+      await tx.session.update({
+        where: { id: data.sessionId },
+        data: {
+          currentPlayerId: nextPlayer.userId,
+          turnNumber: sessionWithParticipants.turnNumber + 1,
+          lastDiceValue: null,
+          diceRolledThisTurn: false,
+          consecutiveSixes: 0,
+          updatedAt: new Date(),
+        },
+      });
+      await tx.gameParticipant.update({
+        where: {
+          sessionId_userId: {
+            sessionId: data.sessionId,
+            userId: data.userId,
+          },
+        },
+        data: { isCurrentTurn: false, updatedAt: new Date() },
+      });
+      await tx.gameParticipant.update({
+        where: {
+          sessionId_userId: {
+            sessionId: data.sessionId,
+            userId: nextPlayer.userId,
+          },
+        },
+        data: { isCurrentTurn: true, updatedAt: new Date() },
+      });
+    });
   }
   async findSessionById(id: string): Promise<SessionWithParticipants | null> {
     return this.prisma.session.findUnique({
