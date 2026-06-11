@@ -8,9 +8,10 @@ import {
   HttpCode,
   HttpException,
   Query,
-  ForbiddenException,
   ConflictException,
   NotFoundException,
+  BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import {
   CreateSessionUseCase,
@@ -53,7 +54,17 @@ export class SessionsController {
     @Param('id') sessionId: string,
     @CurrentUser() user: User,
   ): Promise<GameStateType> {
-    return this.getGameStateUseCase.execute(user, sessionId);
+    try {
+      return this.getGameStateUseCase.execute(user, sessionId);
+    } catch (error) {
+      if (error instanceof SessionNotFoundError) {
+        throw new NotFoundException({
+          code: 'SESSION_NOT_FOUND',
+          message: error.message,
+        });
+      }
+      throw error;
+    }
   }
   @Post(':id/rolls')
   @HttpCode(200)
@@ -67,7 +78,7 @@ export class SessionsController {
       return await this.rollDiceUseCase.execute(sessionId, user.id);
     } catch (error) {
       if (error instanceof NotYourTurnError) {
-        throw new ForbiddenException({
+        throw new BadRequestException({
           code: 'NOT_YOUR_TURN',
           message: error.message,
         });
@@ -156,26 +167,10 @@ export class SessionsController {
         );
       }
       if (error instanceof NotHostError) {
-        throw new HttpException(
-          {
-            status: 'error',
-            code: 'NOT_HOST',
-            message: 'Only the host can start the game',
-            timestamp: new Date().toISOString(),
-          },
-          403,
-        );
+        throw new ForbiddenException('Only the host can start the game');
       }
       if (error instanceof InvalidSessionStatusError) {
-        throw new HttpException(
-          {
-            status: 'error',
-            code: 'INVALID_STATUS',
-            message: 'Session is not in WAITING status',
-            timestamp: new Date().toISOString(),
-          },
-          400,
-        );
+        throw new ConflictException('Session is not in WAITING status');
       }
       if (error instanceof SessionNotFoundError) {
         throw new HttpException(
