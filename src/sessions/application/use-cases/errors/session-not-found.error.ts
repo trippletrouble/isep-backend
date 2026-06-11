@@ -1,6 +1,6 @@
 export class SessionNotFoundError extends Error {
   constructor() {
-    super('Session not found');
+    super('SESSION_NOT_FOUND');
     this.name = 'SessionNotFoundError';
   }
 }

@@ -1,22 +1,31 @@
 import {
-  BadRequestException,
-  Body,
-  ConflictException,
   Controller,
-  ForbiddenException,
+  Post,
+  Body,
+  UseGuards,
+  Param,
   Get,
   HttpCode,
+  HttpException,
+  Query,
+  ConflictException,
   NotFoundException,
-  Param,
-  Post,
-  UseGuards,
+  BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
-import { CreateSessionUseCase } from '../../application';
+import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
+
+import {
+  CreateSessionUseCase,
+  ListOpenSessionsUseCase,
+  ListSessionsRequestDto,
+} from '../../application';
 import { CreateSessionRequestDto } from '../../application';
 import { SessionGuard } from '../../../auth/guards/session.guard';
 import { AuthService } from '../../../auth/application/auth.service';
 import { CurrentUser } from '../../../auth/decorators/current-user.decorator';
 import { User } from '../../../generated/prisma-class/user';
+import { StartSessionUseCase } from '../../application/use-cases/start-session.use-case';
 import { GetGameStateUseCase } from '../../application/use-cases/get-game-state.use-case';
 import { GameStateType } from '../../application/use-cases/types/game-state.type';
 import { DiceRollResultType } from '../../application/use-cases/types/dice-roll-result.type';
@@ -28,14 +37,20 @@ import {
   DiceAlreadyRolledError,
   DiceNotRolledError,
   InvalidSessionStatusError,
-  NotYourTurnError,
+  NotEnoughPlayersError,
+  NotHostError,
   SessionNotFoundError,
+  DiceAlreadyRolledError,
+  NotYourTurnError,
 } from '../../application/use-cases/errors';
 
 @Controller('sessions')
 export class SessionsController {
   constructor(
     private readonly createSessionUseCase: CreateSessionUseCase,
+    private readonly listOpenSessionsUseCase: ListOpenSessionsUseCase,
+    private readonly rollDiceUseCase: RollDiceUseCase,
+    private readonly startSessionUseCase: StartSessionUseCase,
     private readonly getGameStateUseCase: GetGameStateUseCase,
     private readonly rollDiceUseCase: RollDiceUseCase,
     private readonly getPossibleMovesUseCase: GetPossibleMovesUseCase,
@@ -48,7 +63,17 @@ export class SessionsController {
     @Param('id') sessionId: string,
     @CurrentUser() user: User,
   ): Promise<GameStateType> {
-    return this.getGameStateUseCase.execute(user, sessionId);
+    try {
+      return this.getGameStateUseCase.execute(user, sessionId);
+    } catch (error) {
+      if (error instanceof SessionNotFoundError) {
+        throw new NotFoundException({
+          code: 'SESSION_NOT_FOUND',
+          message: error.message,
+        });
+      }
+      throw error;
+    }
   }
 
   @Get(':id/possible-moves')
@@ -94,7 +119,8 @@ export class SessionsController {
 
   @Post(':id/rolls')
   @HttpCode(200)
-  @UseGuards(SessionGuard)
+  @Throttle({ default: { limit: 1000, ttl: 10 * 60 * 1000 } })
+  @UseGuards(ThrottlerGuard, SessionGuard)
   async rollDice(
     @Param('id') sessionId: string,
     @Body() request: RollDiceRequestType,
@@ -104,14 +130,16 @@ export class SessionsController {
       return await this.rollDiceUseCase.execute(sessionId, user.id);
     } catch (error) {
       if (error instanceof NotYourTurnError) {
-        throw new ForbiddenException({
+        throw new BadRequestException({
           code: 'NOT_YOUR_TURN',
           message: error.message,
         });
       }
-
+      if (error instanceof InvalidSessionStatusError) {
+        throw new ConflictException('is not in Progress');
+      }
       if (error instanceof DiceAlreadyRolledError) {
-        throw new ConflictException({
+        throw new BadRequestException({
           code: 'DICE_ALREADY_ROLLED',
           message: error.message,
         });
@@ -142,5 +170,75 @@ export class SessionsController {
     @CurrentUser() user: User,
   ) {
     return this.createSessionUseCase.execute(user.id, request.settings);
+  }
+  @Get()
+  async listOpenSessions(@Query() query: ListSessionsRequestDto) {
+    return this.listOpenSessionsUseCase.execute(query.page, query.size);
+  }
+  @Post(':id/start')
+  @HttpCode(200)
+  @UseGuards(SessionGuard)
+  async startSession(
+    //@Body() request: sessionId,
+    @Param('id') sessionId: string,
+    @CurrentUser() user: User,
+  ): Promise<{
+    sessionId: string;
+    status: string;
+    currentPlayerId: string;
+    playerIdOrder: string[];
+    figures: Array<{
+      id: number;
+      sessionId: string;
+      participantId: string;
+      position: number;
+      status: string;
+    }>;
+  }> {
+    if (!user) {
+      throw new HttpException(
+        {
+          status: 'error',
+          code: 'UNAUTHORIZED',
+          message: 'Authentication required',
+          timestamp: new Date().toISOString(),
+        },
+        401,
+      );
+    }
+
+    try {
+      return await this.startSessionUseCase.execute(sessionId, user);
+    } catch (error) {
+      if (error instanceof NotEnoughPlayersError) {
+        throw new HttpException(
+          {
+            status: 'error',
+            code: 'NOT_ENOUGH_PLAYERS',
+            message: 'At least 2 players are required to start the game',
+            timestamp: new Date().toISOString(),
+          },
+          400,
+        );
+      }
+      if (error instanceof NotHostError) {
+        throw new ForbiddenException('Only the host can start the game');
+      }
+      if (error instanceof InvalidSessionStatusError) {
+        throw new ConflictException('Session is not in WAITING status');
+      }
+      if (error instanceof SessionNotFoundError) {
+        throw new HttpException(
+          {
+            status: 'error',
+            code: 'SESSION_NOT_FOUND',
+            message: 'Session not found',
+            timestamp: new Date().toISOString(),
+          },
+          404,
+        );
+      }
+      throw error;
+    }
   }
 }

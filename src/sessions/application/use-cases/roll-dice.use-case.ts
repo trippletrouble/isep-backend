@@ -9,7 +9,8 @@ import {
   SessionNotFoundError,
 } from './errors';
 import { DiceRollResultType } from './types/dice-roll-result.type';
-
+import { SessionNotFoundError } from './errors';
+import { InvalidSessionStatusError } from './errors';
 @Injectable()
 export class RollDiceUseCase {
   constructor(

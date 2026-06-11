@@ -1,4 +1,4 @@
-import { PlayerColor, PlayerType } from '../../../domain';
+import { PlayerColor, PlayerType } from '@prisma/client';
 
 export type GameStateFromPlayerType = {
   id: string;
