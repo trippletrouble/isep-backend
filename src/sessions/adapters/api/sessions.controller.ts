@@ -86,9 +86,11 @@ export class SessionsController {
           message: error.message,
         });
       }
-
+      if (error instanceof InvalidSessionStatusError) {
+        throw new ConflictException('is not in Progress');
+      }
       if (error instanceof DiceAlreadyRolledError) {
-        throw new ConflictException({
+        throw new BadRequestException({
           code: 'DICE_ALREADY_ROLLED',
           message: error.message,
         });
