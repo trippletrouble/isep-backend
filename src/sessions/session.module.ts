@@ -1,10 +1,9 @@
 import { Module } from '@nestjs/common';
 import { PrismaModule } from '../prisma/prisma.module';
-//import { Session, GameParticipant, LobbySettings } from './domain/model';
 import { SessionRepositoryPort } from './ports';
 import { PrismaSessionRepository } from './adapters';
 import { SessionsController } from './adapters';
-import { CreateSessionUseCase } from './application';
+import { CreateSessionUseCase, ListOpenSessionsUseCase } from './application';
 import { AuthModule } from '../auth/auth.module';
 import { GetGameStateUseCase } from './application/use-cases/get-game-state.use-case';
 import { StartSessionUseCase } from './application/use-cases/start-session.use-case';
@@ -16,11 +15,17 @@ import { StartSessionUseCase } from './application/use-cases/start-session.use-c
     CreateSessionUseCase,
     GetGameStateUseCase,
     StartSessionUseCase,
+    ListOpenSessionsUseCase,
     {
       provide: SessionRepositoryPort,
       useClass: PrismaSessionRepository,
     },
   ],
-  exports: [SessionRepositoryPort, CreateSessionUseCase, StartSessionUseCase],
+  exports: [
+    SessionRepositoryPort,
+    StartSessionUseCase,
+    CreateSessionUseCase,
+    ListOpenSessionsUseCase,
+  ],
 })
 export class SessionModule {}

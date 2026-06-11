@@ -21,4 +21,8 @@ export abstract class SessionRepositoryPort {
   abstract createParticipant(
     participant: ParticipantDto,
   ): Promise<GameParticipant | null>;
+  abstract findOpenPublicSessions(
+    page: number,
+    size: number,
+  ): Promise<{ items: Session[]; total: number }>;
 }

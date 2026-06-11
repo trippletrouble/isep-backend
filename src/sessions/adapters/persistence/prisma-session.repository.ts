@@ -5,9 +5,7 @@ import { LobbySettings } from '../../domain';
 import { Session } from 'src/generated/prisma-class/session';
 import { User } from 'src/generated/prisma-class/user';
 import { GameStateType } from 'src/sessions/application/use-cases/types/game-state.type';
-import {
-  SessionWithParticipants,
-} from '../../application/use-cases/types';
+import { SessionWithParticipants } from '../../application/use-cases/types';
 import { Prisma } from '@prisma/client';
 import { GameParticipant } from '../../../generated/prisma-class/game_participant';
 
@@ -132,7 +130,27 @@ export class PrismaSessionRepository implements SessionRepositoryPort {
       where: { id },
     });
   }
+  async findOpenPublicSessions(
+    page: number,
+    size: number,
+  ): Promise<{ items: Session[]; total: number }> {
+    const where = {
+      status: 'WAITING' as const,
+      isPrivate: false,
+    };
 
+    const [items, total] = await Promise.all([
+      this.prisma.session.findMany({
+        where,
+        skip: (page - 1) * size,
+        take: size,
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.session.count({ where }),
+    ]);
+
+    return { items, total };
+  }
   async updateSessionById(
     id: string,
     data: Partial<Session>,
