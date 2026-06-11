@@ -13,9 +13,20 @@ import { DiceClientPort } from './ports/dice-client.port';
 import { HttpDiceClientAdapter } from './adapters/dice/http-dice-client.adapter';
 import { StartSessionUseCase } from './application/use-cases/start-session.use-case';
 import { ConfigModule } from '@nestjs/config';
+import { ThrottlerModule } from '@nestjs/throttler';
 
 @Module({
-  imports: [PrismaModule, AuthModule, ConfigModule.forRoot()],
+  imports: [
+    PrismaModule,
+    AuthModule,
+    ConfigModule.forRoot(),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 10 * 60 * 1000,
+        limit: 3,
+      },
+    ]),
+  ],
   controllers: [SessionsController],
   providers: [
     CreateSessionUseCase,

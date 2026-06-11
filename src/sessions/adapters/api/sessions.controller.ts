@@ -12,12 +12,14 @@ import {
   ForbiddenException,
   ConflictException,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import {
   CreateSessionUseCase,
   ListOpenSessionsUseCase,
   ListSessionsRequestDto,
 } from '../../application';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { CreateSessionRequestDto } from '../../application';
 import { SessionGuard } from '../../../auth/guards/session.guard';
 import { AuthService } from '../../../auth/application/auth.service';
@@ -65,7 +67,8 @@ export class SessionsController {
 
   @Post(':id/moves')
   @HttpCode(200)
-  @UseGuards(SessionGuard)
+  @Throttle({ default: { limit: 1000, ttl: 10 * 60 * 1000 } })
+  @UseGuards(ThrottlerGuard, SessionGuard)
   async moveFigure(
     @Param('id') sessionId: string,
     @Body() request: MoveFigureRequestDto,
@@ -80,7 +83,6 @@ export class SessionsController {
           message: error.message,
         });
       }
-
       if (error instanceof NotYourTurnError) {
         throw new ForbiddenException({
           code: 'NOT_YOUR_TURN',
@@ -115,7 +117,8 @@ export class SessionsController {
 
   @Post(':id/rolls')
   @HttpCode(200)
-  @UseGuards(SessionGuard)
+  @Throttle({ default: { limit: 1000, ttl: 10 * 60 * 1000 } })
+  @UseGuards(ThrottlerGuard, SessionGuard)
   async rollDice(
     @Param('id') sessionId: string,
     @Body() request: RollDiceRequestType,
