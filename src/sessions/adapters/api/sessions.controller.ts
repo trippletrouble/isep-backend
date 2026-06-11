@@ -13,6 +13,8 @@ import {
   BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
+import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
+
 import {
   CreateSessionUseCase,
   ListOpenSessionsUseCase,
@@ -68,7 +70,8 @@ export class SessionsController {
   }
   @Post(':id/rolls')
   @HttpCode(200)
-  @UseGuards(SessionGuard)
+  @Throttle({ default: { limit: 1000, ttl: 10 * 60 * 1000 } })
+  @UseGuards(ThrottlerGuard, SessionGuard)
   async rollDice(
     @Param('id') sessionId: string,
     @Body() request: RollDiceRequestType,
