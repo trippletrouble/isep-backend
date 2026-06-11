@@ -3,7 +3,9 @@ import {
   PlayerType,
 } from '../../../generated/prisma-client/enums';
 
-export class ParticipantDto {
+import { GameParticipant } from '../../../generated/prisma-class/game_participant';
+
+export class ParticipantDto extends GameParticipant {
   constructor(
     updatedAt: Date,
     sessionId: string,
@@ -18,6 +20,7 @@ export class ParticipantDto {
     figuresCaptured: number,
     joinedAt: Date,
   ) {
+    super();
     this.updatedAt = updatedAt;
     this.sessionId = sessionId;
     this.userId = userId;
@@ -31,17 +34,4 @@ export class ParticipantDto {
     this.figuresCaptured = figuresCaptured;
     this.joinedAt = joinedAt;
   }
-
-  updatedAt: Date;
-  sessionId: string;
-  userId: string;
-  color: PlayerColor;
-  type: PlayerType;
-  isBot: boolean;
-  isCurrentTurn: boolean;
-  hasFinished: boolean;
-  figuresInGoal: number;
-  placement: number | null;
-  figuresCaptured: number;
-  joinedAt: Date;
-};
+}

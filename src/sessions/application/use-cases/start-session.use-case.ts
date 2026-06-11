@@ -3,13 +3,14 @@ import { PieceStatus } from '@prisma/client';
 import { SessionRepositoryPort } from '../../ports';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { User } from '../../../generated/prisma-class/user';
-import { Participant, StartSessionInfoType } from './types';
+import { StartSessionInfoType } from './types';
 import {
   InvalidSessionStatusError,
   NotEnoughPlayersError,
   NotHostError,
   SessionNotFoundError,
 } from './errors';
+import { GameParticipant } from '../../../generated/prisma-class/game_participant';
 
 export {
   InvalidSessionStatusError,
@@ -42,15 +43,16 @@ export class StartSessionUseCase {
     if (session.hostId !== user.id) throw new NotHostError();
 
     if (session.status !== 'WAITING') throw new InvalidSessionStatusError();
-
-    const participants = session.participants;
+    const participants: GameParticipant[] = session.participants;
 
     if (participants.length < 2) throw new NotEnoughPlayersError();
 
-    const shuffledParticipants: Participant[] = [...participants].sort(
+    const shuffledParticipants: GameParticipant[] = [...participants].sort(
       () => Math.random() - 0.5,
     );
-    const playerIdOrder = shuffledParticipants.map((p) => p.userId);
+    const playerIdOrder = shuffledParticipants.map(
+      (p: GameParticipant) => p.userId,
+    );
     const firstPlayerId = shuffledParticipants[0].userId;
 
     const figuresToCreate: CreatedFigure[] = [];
@@ -80,7 +82,6 @@ export class StartSessionUseCase {
     });
 
     await this.prisma.$transaction(async (tx) => {
-
       await tx.figure.createMany({
         data: figuresToCreate,
         skipDuplicates: true,

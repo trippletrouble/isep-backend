@@ -5,21 +5,21 @@ import { LobbySettings } from '../../domain';
 import { Session } from 'src/generated/prisma-class/session';
 import { User } from 'src/generated/prisma-class/user';
 import {
-  Participant,
   SessionWithParticipants,
 } from '../../application/use-cases/types';
 import { Prisma } from '@prisma/client';
+import { GameParticipant } from '../../../generated/prisma-class/game_participant';
 
 @Injectable()
 export class PrismaSessionRepository implements SessionRepositoryPort {
   constructor(private readonly prisma: PrismaService) {}
   async createParticipant(
-    participant: Participant,
-  ): Promise<Participant | null> {
+    participant: GameParticipant,
+  ): Promise<GameParticipant | null> {
     const promis_participant = await this.prisma.gameParticipant.create({
       data: {
-        sessionId:participant.sessionId,
-        userId:participant.userId,
+        sessionId: participant.sessionId,
+        userId: participant.userId,
         color: participant.color,
         updatedAt: participant.updatedAt,
         type: participant.type,

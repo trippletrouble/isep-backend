@@ -1,5 +1,4 @@
-import { PlayerColor, PlayerType } from '../../domain';
-
+import { PlayerColor, PlayerType } from '@prisma/client';
 export class LobbyPlayerDto {
   constructor(
     id: string,
