@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Controller,
   Post,
   Body,
@@ -8,10 +9,10 @@ import {
   HttpCode,
   HttpException,
   Query,
+  ForbiddenException,
   ConflictException,
   NotFoundException,
-  BadRequestException,
-  ForbiddenException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
 
@@ -31,23 +32,29 @@ import { GameStateType } from '../../application/use-cases/types/game-state.type
 import { DiceRollResultType } from '../../application/use-cases/types/dice-roll-result.type';
 import { RollDiceRequestType } from '../../application/use-cases/types/dice-roll-request.type';
 import { RollDiceUseCase } from '../../application/use-cases/roll-dice.use-case';
+import { MoveFigureRequestDto } from '../../application/dtos/move-figure-request.dto';
+import { MoveFigureUseCase } from '../../application/use-cases/move-figure.use-case';
 import {
   InvalidSessionStatusError,
   NotEnoughPlayersError,
   NotHostError,
   SessionNotFoundError,
   DiceAlreadyRolledError,
+  DiceNotRolledError,
+  InvalidMoveError,
   NotYourTurnError,
 } from '../../application/use-cases/errors';
+import { MoveFigureResultType } from '../../application/use-cases/types/move-figure-result.type';
 
 @Controller('sessions')
 export class SessionsController {
   constructor(
     private readonly createSessionUseCase: CreateSessionUseCase,
     private readonly listOpenSessionsUseCase: ListOpenSessionsUseCase,
-    private readonly rollDiceUseCase: RollDiceUseCase,
-    private readonly startSessionUseCase: StartSessionUseCase,
     private readonly getGameStateUseCase: GetGameStateUseCase,
+    private readonly rollDiceUseCase: RollDiceUseCase,
+    private readonly moveFigureUseCase: MoveFigureUseCase,
+    private readonly startSessionUseCase: StartSessionUseCase,
     private readonly authService: AuthService,
   ) {}
   @Get(':id')
@@ -68,6 +75,57 @@ export class SessionsController {
       throw error;
     }
   }
+
+  @Post(':id/moves')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 1000, ttl: 10 * 60 * 1000 } })
+  @UseGuards(ThrottlerGuard, SessionGuard)
+  async moveFigure(
+    @Param('id') sessionId: string,
+    @Body() request: MoveFigureRequestDto,
+    @CurrentUser() user: User,
+  ): Promise<MoveFigureResultType> {
+    try {
+      return await this.moveFigureUseCase.execute(sessionId, user.id, request);
+    } catch (error) {
+      if (error instanceof InvalidMoveError) {
+        throw new BadRequestException({
+          code: 'INVALID_MOVE',
+          message: error.message,
+        });
+      }
+      if (error instanceof NotYourTurnError) {
+        throw new ForbiddenException({
+          code: 'NOT_YOUR_TURN',
+          message: error.message,
+        });
+      }
+
+      if (error instanceof DiceNotRolledError) {
+        throw new ConflictException({
+          code: 'DICE_NOT_ROLLED',
+          message: error.message,
+        });
+      }
+
+      if (error instanceof SessionNotFoundError) {
+        throw new NotFoundException({
+          code: 'SESSION_NOT_FOUND',
+          message: error.message,
+        });
+      }
+
+      if (error instanceof InvalidSessionStatusError) {
+        throw new ConflictException({
+          code: 'INVALID_SESSION_STATUS',
+          message: error.message,
+        });
+      }
+
+      throw error;
+    }
+  }
+
   @Post(':id/rolls')
   @HttpCode(200)
   @Throttle({ default: { limit: 1000, ttl: 10 * 60 * 1000 } })
