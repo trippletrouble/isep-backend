@@ -14,7 +14,7 @@ export class HttpDiceClientAdapter extends DiceClientPort {
     if (!baseUrl) {
       // Für lokale Entwicklung als Fallback.
       // Wenn der Würfelservice zwingend sein soll, stattdessen Error werfen.
-      return 6;//Math.floor(Math.random() * 6) + 1;
+      return Math.floor(Math.random() * 6) + 1;
     }
 
     const response = await fetch(`${baseUrl}/roll`, {

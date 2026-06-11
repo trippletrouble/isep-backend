@@ -29,89 +29,12 @@ export class PrismaSessionRepository implements SessionRepositoryPort {
           },
         },
         figures: {
-          orderBy: {
-            id: 'asc',
-          },
-        },
-      },
-    });
-
-    if (!session) {
-      return null;
-    }
-
-    return {
-      sessionId: session.id,
-      status: session.status,
-      mode: session.mode,
-      boardTheme: session.boardTheme,
-      players: session.participants.map((participant) => ({
-        id: participant.userId,
-        username: participant.user.username,
-        color: participant.color,
-        type: participant.type,
-        isCurrentTurn: participant.isCurrentTurn,
-        hasFinished: participant.hasFinished,
-        figuresInGoal: participant.figuresInGoal,
-      })),
-      figures: session.figures.map((figure) => ({
-        id: figure.id,
-        playerId: figure.participantId,
-        position: figure.position,
-        status: figure.status,
-      })),
-      currentPlayerId: session.currentPlayerId,
-      turnNumber: session.turnNumber,
-      lastDiceValue: session.lastDiceValue,
-      diceRolledThisTurn: session.diceRolledThisTurn,
-      consecutiveSixes: session.consecutiveSixes,
-      activeRules: session.additionalRules,
-      winnerId: session.winnerId,
-      createdAt: session.createdAt.toISOString(),
-      lastUpdatedAt: session.updatedAt.toISOString(),
-    };
-  }
-  async createParticipant(
-    participant: GameParticipant,
-  ): Promise<GameParticipant | null> {
-    const promis_participant = await this.prisma.gameParticipant.create({
-      data: {
-        sessionId: participant.sessionId,
-        userId: participant.userId,
-        color: participant.color,
-        updatedAt: participant.updatedAt,
-        type: participant.type,
-        isBot: participant.isBot,
-        isCurrentTurn: participant.isCurrentTurn,
-        hasFinished: participant.hasFinished,
-        figuresInGoal: participant.figuresInGoal,
-        placement: participant.placement,
-        figuresCaptured: participant.figuresCaptured,
-        joinedAt: participant.joinedAt,
-      },
-    });
-    return promis_participant;
-  }
-
-  async findGameStateById(id: string): Promise<GameStateType | null> {
-    const session = await this.prisma.session.findUnique({
-      where: { id },
-      include: {
-        participants: {
           include: {
-            user: {
+            participant: {
               select: {
-                username: true,
+                userId: true,
               },
             },
-          },
-          orderBy: {
-            joinedAt: 'asc',
-          },
-        },
-        figures: {
-          include: {
-            participant: true,
           },
           orderBy: {
             id: 'asc',
@@ -154,6 +77,27 @@ export class PrismaSessionRepository implements SessionRepositoryPort {
       createdAt: session.createdAt.toISOString(),
       lastUpdatedAt: session.updatedAt.toISOString(),
     };
+  }
+  async createParticipant(
+    participant: GameParticipant,
+  ): Promise<GameParticipant | null> {
+    const promis_participant = await this.prisma.gameParticipant.create({
+      data: {
+        sessionId: participant.sessionId,
+        userId: participant.userId,
+        color: participant.color,
+        updatedAt: participant.updatedAt,
+        type: participant.type,
+        isBot: participant.isBot,
+        isCurrentTurn: participant.isCurrentTurn,
+        hasFinished: participant.hasFinished,
+        figuresInGoal: participant.figuresInGoal,
+        placement: participant.placement,
+        figuresCaptured: participant.figuresCaptured,
+        joinedAt: participant.joinedAt,
+      },
+    });
+    return promis_participant;
   }
 
   async createSession(

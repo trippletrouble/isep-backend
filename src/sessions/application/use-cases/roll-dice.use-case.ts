@@ -5,7 +5,8 @@ import { PossibleMoveCalculatorUseCase } from './possible-move-calculator.use-ca
 import { NotYourTurnError } from './errors/not-your-turn.error';
 import { DiceAlreadyRolledError } from './errors/dice-already-rolled.error';
 import { DiceRollResultType } from './types/dice-roll-result.type';
-
+import { SessionNotFoundError } from './errors';
+import { InvalidSessionStatusError } from './errors';
 @Injectable()
 export class RollDiceUseCase {
   constructor(
