@@ -7,6 +7,7 @@ import { SessionsController } from './adapters';
 import { CreateSessionUseCase } from './application';
 import { AuthModule } from '../auth/auth.module';
 import { GetGameStateUseCase } from './application/use-cases/get-game-state.use-case';
+import { StartSessionUseCase } from './application/use-cases/start-session.use-case';
 
 @Module({
   imports: [PrismaModule, AuthModule],
@@ -14,11 +15,12 @@ import { GetGameStateUseCase } from './application/use-cases/get-game-state.use-
   providers: [
     CreateSessionUseCase,
     GetGameStateUseCase,
+    StartSessionUseCase,
     {
       provide: SessionRepositoryPort,
       useClass: PrismaSessionRepository,
     },
   ],
-  exports: [SessionRepositoryPort, CreateSessionUseCase],
+  exports: [SessionRepositoryPort, CreateSessionUseCase, StartSessionUseCase],
 })
 export class SessionModule {}
