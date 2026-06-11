@@ -8,10 +8,8 @@ export interface CreateUserDto {
   role?: UserRole;
 }
 
-export const USER_REPOSITORY = Symbol('USER_REPOSITORY');
-
-export interface IUserRepository {
-  findByKeycloakSub(sub: string): Promise<User | null>;
-  findById(id: string): Promise<User | null>;
-  create(dto: CreateUserDto): Promise<User>;
+export abstract class UserRepositoryPort {
+  abstract findById(id: string): Promise<User | null>;
+  abstract findByKeycloakSub(sub: string): Promise<User | null>;
+  abstract create(dto: CreateUserDto): Promise<User>;
 }
