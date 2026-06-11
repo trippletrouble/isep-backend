@@ -1,0 +1,26 @@
+import {
+  GameStatus,
+  GameMode,
+  BoardTheme,
+  AdditionalRule,
+} from '../../../domain/model/session.model';
+import { GameStateFromPlayerType } from './game-state-from-Player.type';
+import { GameStateFigureType } from './game-state-figure.type';
+
+export type GameStateType = {
+  sessionId: string;
+  status: GameStatus;
+  mode: GameMode;
+  boardTheme: BoardTheme;
+  players: GameStateFromPlayerType[]; // GameStatePlayerDto[];
+  figures: GameStateFigureType[];
+  currentPlayerId: string | null;
+  turnNumber: number;
+  lastDiceValue: number | null;
+  diceRolledThisTurn: boolean;
+  consecutiveSixes: number;
+  activeRules: AdditionalRule[];
+  winnerId: string | null;
+  createdAt: string;
+  lastUpdatedAt: string;
+};
