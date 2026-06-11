@@ -4,6 +4,7 @@ import { SessionRepositoryPort } from '../../ports';
 import { LobbySettings } from '../../domain';
 import { Session } from 'src/generated/prisma-class/session';
 import { User } from 'src/generated/prisma-class/user';
+import { GameStateType } from 'src/sessions/application/use-cases/types/game-state.type';
 import {
   SessionWithParticipants,
 } from '../../application/use-cases/types';
@@ -13,6 +14,65 @@ import { GameParticipant } from '../../../generated/prisma-class/game_participan
 @Injectable()
 export class PrismaSessionRepository implements SessionRepositoryPort {
   constructor(private readonly prisma: PrismaService) {}
+  async findGameStateById(id: string): Promise<GameStateType | null> {
+    const session = await this.prisma.session.findUnique({
+      where: { id },
+      include: {
+        participants: {
+          include: {
+            user: {
+              select: {
+                username: true,
+              },
+            },
+          },
+          orderBy: {
+            joinedAt: 'asc',
+          },
+        },
+        figures: {
+          orderBy: {
+            id: 'asc',
+          },
+        },
+      },
+    });
+
+    if (!session) {
+      return null;
+    }
+
+    return {
+      sessionId: session.id,
+      status: session.status,
+      mode: session.mode,
+      boardTheme: session.boardTheme,
+      players: session.participants.map((participant) => ({
+        id: participant.userId,
+        username: participant.user.username,
+        color: participant.color,
+        type: participant.type,
+        isCurrentTurn: participant.isCurrentTurn,
+        hasFinished: participant.hasFinished,
+        figuresInGoal: participant.figuresInGoal,
+      })),
+      figures: session.figures.map((figure) => ({
+        id: figure.id,
+        playerId: figure.participantId,
+        position: figure.position,
+        status: figure.status,
+      })),
+      currentPlayerId: session.currentPlayerId,
+      turnNumber: session.turnNumber,
+      lastDiceValue: session.lastDiceValue,
+      diceRolledThisTurn: session.diceRolledThisTurn,
+      consecutiveSixes: session.consecutiveSixes,
+      activeRules: session.additionalRules,
+      winnerId: session.winnerId,
+      createdAt: session.createdAt.toISOString(),
+      lastUpdatedAt: session.updatedAt.toISOString(),
+    };
+  }
   async createParticipant(
     participant: GameParticipant,
   ): Promise<GameParticipant | null> {
