@@ -1,5 +1,9 @@
-import { Controller, Post, Body, UseGuards } from '@nestjs/common';
-import { CreateSessionUseCase } from '../../application';
+import { Controller, Post, Body, UseGuards, Get, Query } from '@nestjs/common';
+import {
+  CreateSessionUseCase,
+  ListOpenSessionsUseCase,
+  ListSessionsRequestDto,
+} from '../../application';
 import { CreateSessionRequestDto } from '../../application';
 import { SessionGuard } from '../../../auth/guards/session.guard';
 import { AuthService } from '../../../auth/application/auth.service';
@@ -10,6 +14,7 @@ import { User } from '../../../generated/prisma-class/user';
 export class SessionsController {
   constructor(
     private readonly createSessionUseCase: CreateSessionUseCase,
+    private readonly listOpenSessionsUseCase: ListOpenSessionsUseCase,
     private readonly authService: AuthService,
   ) {}
   @Post()
@@ -19,5 +24,10 @@ export class SessionsController {
     @CurrentUser() user: User,
   ) {
     return this.createSessionUseCase.execute(user.id, request.settings);
+  }
+
+  @Get()
+  async listOpenSessions(@Query() query: ListSessionsRequestDto) {
+    return this.listOpenSessionsUseCase.execute(query.page, query.size);
   }
 }

@@ -46,4 +46,26 @@ export class PrismaSessionRepository implements SessionRepositoryPort {
       where: { id },
     });
   }
+
+  async findOpenPublicSessions(
+    page: number,
+    size: number,
+  ): Promise<{ items: Session[]; total: number }> {
+    const where = {
+      status: 'WAITING' as const,
+      isPrivate: false,
+    };
+
+    const [items, total] = await Promise.all([
+      this.prisma.session.findMany({
+        where,
+        skip: (page - 1) * size,
+        take: size,
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.session.count({ where }),
+    ]);
+
+    return { items, total };
+  }
 }

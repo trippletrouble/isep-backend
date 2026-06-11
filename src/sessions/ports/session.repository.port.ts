@@ -9,4 +9,8 @@ export abstract class SessionRepositoryPort {
   abstract findSessionById(id: string): Promise<Session | null>;
   abstract findByIdMinimal(id: string): Promise<Session | null>;
   abstract findUserById(id: string): Promise<User | null>;
+  abstract findOpenPublicSessions(
+    page: number,
+    size: number,
+  ): Promise<{ items: Session[]; total: number }>;
 }
