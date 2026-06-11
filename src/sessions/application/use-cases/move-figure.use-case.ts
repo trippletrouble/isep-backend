@@ -1,7 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { MoveFigureRequestDto } from '../dtos/move-figure-request.dto';
 import { SessionRepositoryPort } from '../../ports';
-import { PossibleMoveCalculatorUseCase } from './possible-move-calculator.use-case';
+import {
+  FINAL_GOAL_POSITION,
+  PossibleMoveCalculatorUseCase,
+} from './possible-move-calculator.use-case';
 import {
   DiceNotRolledError,
   InvalidMoveError,
@@ -28,7 +31,6 @@ export class MoveFigureUseCase {
     request: MoveFigureRequestDto,
   ): Promise<MoveFigureResultType> {
     const gameState = await this.sessionRepository.findGameStateById(sessionId);
-
     if (!gameState) {
       throw new SessionNotFoundError();
     }
@@ -118,12 +120,11 @@ export class MoveFigureUseCase {
     if (capturesOpponent) {
       return 'CAPTURED';
     }
-
-    if (toPosition === 56) {
+    if (toPosition === FINAL_GOAL_POSITION) {
       const allFiguresInGoal = ownFigures.every((figure) =>
-        figure.id === movedFigureId
-          ? true
-          : figure.position === 56 || figure.status === 'GOAL',
+        figure.id !== movedFigureId
+          ? figure.position === FINAL_GOAL_POSITION || figure.status === 'GOAL'
+          : true,
       );
 
       return allFiguresInGoal ? 'GAME_WON' : 'GOAL';

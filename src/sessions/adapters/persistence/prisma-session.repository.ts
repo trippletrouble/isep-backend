@@ -12,6 +12,19 @@ import { ApplyMoveData } from '../../application/use-cases/types/apply-move-data
 @Injectable()
 export class PrismaSessionRepository implements SessionRepositoryPort {
   constructor(private readonly prisma: PrismaService) {}
+  async findParticipant(
+    sessionId: string,
+    userId: string,
+  ): Promise<GameParticipant | null> {
+    return await this.prisma.gameParticipant.findUnique({
+      where: {
+        sessionId_userId: {
+          sessionId: sessionId,
+          userId: userId,
+        },
+      },
+    });
+  }
   async findGameStateById(id: string): Promise<GameStateType | null> {
     const session = await this.prisma.session.findUnique({
       where: { id },
