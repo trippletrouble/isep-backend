@@ -29,6 +29,13 @@ export class PrismaSessionRepository implements SessionRepositoryPort {
           },
         },
         figures: {
+          include: {
+            participant: {
+              select: {
+                userId: true,
+              },
+            },
+          },
           orderBy: {
             id: 'asc',
           },
@@ -56,7 +63,7 @@ export class PrismaSessionRepository implements SessionRepositoryPort {
       })),
       figures: session.figures.map((figure) => ({
         id: figure.id,
-        playerId: figure.participantId,
+        playerId: figure.participant.userId,
         position: figure.position,
         status: figure.status,
       })),
@@ -109,7 +116,75 @@ export class PrismaSessionRepository implements SessionRepositoryPort {
       },
     });
   }
+  async updateAfterDiceRoll(
+    sessionId: string,
+    data: {
+      lastDiceValue: number;
+      diceRolledThisTurn: boolean;
+      consecutiveSixes: number;
+    },
+  ): Promise<void> {
+    await this.prisma.session.update({
+      where: { id: sessionId },
+      data: {
+        lastDiceValue: data.lastDiceValue,
+        diceRolledThisTurn: data.diceRolledThisTurn,
+        consecutiveSixes: data.consecutiveSixes,
+        updatedAt: new Date(),
+      },
+    });
+  }
+  async passTurn(sessionId: string, currentPlayerId: string): Promise<void> {
+    const sessionwithParticipants = await this.prisma.session.findUnique({
+      where: { id: sessionId },
+      include: { participants: true },
+    });
 
+    if (!sessionwithParticipants) throw new Error('Session not found');
+    const currentPlayerIndex = sessionwithParticipants.participants.findIndex(
+      (p) => p.userId === currentPlayerId,
+    );
+
+    if (currentPlayerIndex === -1)
+      throw new Error('Current player not found in session');
+    const participants = sessionwithParticipants.participants;
+    const nextPlayerIndex = (currentPlayerIndex + 1) % participants.length;
+    const nextPlayer = participants[nextPlayerIndex];
+    await this.prisma.$transaction([
+      this.prisma.session.update({
+        where: { id: sessionId },
+        data: {
+          currentPlayerId: nextPlayer.userId,
+          turnNumber: sessionwithParticipants.turnNumber + 1,
+          lastDiceValue: null, // Reset für nächsten Zug
+          diceRolledThisTurn: false,
+          consecutiveSixes: 0, // Reset bei Zugwechsel
+          updatedAt: new Date(),
+        },
+      }),
+      //this.prisma.gameParticipant.findFirst(where: {userId: currentPlayerId})
+      this.prisma.gameParticipant.update({
+        where: {
+          sessionId_userId: {
+            sessionId: sessionId,
+            userId: currentPlayerId,
+          },
+        },
+
+        data: { isCurrentTurn: false, updatedAt: new Date() },
+      }),
+      this.prisma.gameParticipant.update({
+        //where: { id: nextPlayer.id },
+        where: {
+          sessionId_userId: {
+            sessionId: sessionId,
+            userId: nextPlayer.userId,
+          },
+        },
+        data: { isCurrentTurn: true, updatedAt: new Date() },
+      }),
+    ]);
+  }
   async findSessionById(id: string): Promise<SessionWithParticipants | null> {
     return this.prisma.session.findUnique({
       where: { id },

@@ -12,6 +12,14 @@ export class GetGameStateUseCase {
 
   async execute(user: User, sessionId: string): Promise<GameStateType> {
     const gameState = await this.sessionRepository.findGameStateById(sessionId);
+    if (!gameState) {
+      throw new NotFoundException({
+        status: 'error',
+        code: 'SESSION_NOT_FOUND',
+        message: 'Session not found',
+        timestamp: new Date().toISOString(),
+      });
+    }
     let isInGame: boolean;
     isInGame = false;
     gameState?.players.forEach((player) => {
@@ -22,15 +30,6 @@ export class GetGameStateUseCase {
     if (!isInGame) {
       throw new Error('You are not part of the game');
     }
-    if (!gameState) {
-      throw new NotFoundException({
-        status: 'error',
-        code: 'SESSION_NOT_FOUND',
-        message: 'Session not found',
-        timestamp: new Date().toISOString(),
-      });
-    }
-
     return gameState;
   }
 }

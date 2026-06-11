@@ -3,12 +3,18 @@ import {
   Post,
   Body,
   UseGuards,
-  HttpCode,
-  HttpException,
   Param,
   Get,
+  HttpCode,
+  HttpException,
   Query,
+  ConflictException,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
+import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
+
 import {
   CreateSessionUseCase,
   ListOpenSessionsUseCase,
@@ -19,20 +25,27 @@ import { SessionGuard } from '../../../auth/guards/session.guard';
 import { AuthService } from '../../../auth/application/auth.service';
 import { CurrentUser } from '../../../auth/decorators/current-user.decorator';
 import { User } from '../../../generated/prisma-class/user';
+import { StartSessionUseCase } from '../../application/use-cases/start-session.use-case';
 import { GetGameStateUseCase } from '../../application/use-cases/get-game-state.use-case';
 import { GameStateType } from '../../application/use-cases/types/game-state.type';
+import { DiceRollResultType } from '../../application/use-cases/types/dice-roll-result.type';
+import { RollDiceRequestType } from '../../application/use-cases/types/dice-roll-request.type';
+import { RollDiceUseCase } from '../../application/use-cases/roll-dice.use-case';
 import {
   InvalidSessionStatusError,
   NotEnoughPlayersError,
   NotHostError,
   SessionNotFoundError,
-  StartSessionUseCase,
-} from '../../application/use-cases/start-session.use-case';
+  DiceAlreadyRolledError,
+  NotYourTurnError,
+} from '../../application/use-cases/errors';
+
 @Controller('sessions')
 export class SessionsController {
   constructor(
     private readonly createSessionUseCase: CreateSessionUseCase,
     private readonly listOpenSessionsUseCase: ListOpenSessionsUseCase,
+    private readonly rollDiceUseCase: RollDiceUseCase,
     private readonly startSessionUseCase: StartSessionUseCase,
     private readonly getGameStateUseCase: GetGameStateUseCase,
     private readonly authService: AuthService,
@@ -43,7 +56,62 @@ export class SessionsController {
     @Param('id') sessionId: string,
     @CurrentUser() user: User,
   ): Promise<GameStateType> {
-    return this.getGameStateUseCase.execute(user, sessionId);
+    try {
+      return this.getGameStateUseCase.execute(user, sessionId);
+    } catch (error) {
+      if (error instanceof SessionNotFoundError) {
+        throw new NotFoundException({
+          code: 'SESSION_NOT_FOUND',
+          message: error.message,
+        });
+      }
+      throw error;
+    }
+  }
+  @Post(':id/rolls')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 1000, ttl: 10 * 60 * 1000 } })
+  @UseGuards(ThrottlerGuard, SessionGuard)
+  async rollDice(
+    @Param('id') sessionId: string,
+    @Body() request: RollDiceRequestType,
+    @CurrentUser() user: User,
+  ): Promise<DiceRollResultType> {
+    try {
+      return await this.rollDiceUseCase.execute(sessionId, user.id);
+    } catch (error) {
+      if (error instanceof NotYourTurnError) {
+        throw new BadRequestException({
+          code: 'NOT_YOUR_TURN',
+          message: error.message,
+        });
+      }
+      if (error instanceof InvalidSessionStatusError) {
+        throw new ConflictException('is not in Progress');
+      }
+      if (error instanceof DiceAlreadyRolledError) {
+        throw new BadRequestException({
+          code: 'DICE_ALREADY_ROLLED',
+          message: error.message,
+        });
+      }
+
+      if (error instanceof SessionNotFoundError) {
+        throw new NotFoundException({
+          code: 'SESSION_NOT_FOUND',
+          message: error.message,
+        });
+      }
+
+      if (error instanceof InvalidSessionStatusError) {
+        throw new ConflictException({
+          code: 'INVALID_SESSION_STATUS',
+          message: error.message,
+        });
+      }
+
+      throw error;
+    }
   }
   @Post()
   @UseGuards(SessionGuard)
@@ -104,26 +172,10 @@ export class SessionsController {
         );
       }
       if (error instanceof NotHostError) {
-        throw new HttpException(
-          {
-            status: 'error',
-            code: 'NOT_HOST',
-            message: 'Only the host can start the game',
-            timestamp: new Date().toISOString(),
-          },
-          403,
-        );
+        throw new ForbiddenException('Only the host can start the game');
       }
       if (error instanceof InvalidSessionStatusError) {
-        throw new HttpException(
-          {
-            status: 'error',
-            code: 'INVALID_STATUS',
-            message: 'Session is not in WAITING status',
-            timestamp: new Date().toISOString(),
-          },
-          400,
-        );
+        throw new ConflictException('Session is not in WAITING status');
       }
       if (error instanceof SessionNotFoundError) {
         throw new HttpException(
