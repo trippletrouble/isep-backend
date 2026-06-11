@@ -61,7 +61,7 @@ export class PossibleMoveCalculatorUseCase {
       player.color,
       diceValue,
     );
-
+    console.log('to Position', toPosition);
     if (toPosition === null) {
       return null;
     }

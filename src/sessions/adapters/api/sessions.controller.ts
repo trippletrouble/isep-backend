@@ -1,22 +1,29 @@
 import {
   BadRequestException,
-  Body,
-  ConflictException,
   Controller,
-  ForbiddenException,
+  Post,
+  Body,
+  UseGuards,
+  Param,
   Get,
   HttpCode,
+  HttpException,
+  Query,
+  ForbiddenException,
+  ConflictException,
   NotFoundException,
-  Param,
-  Post,
-  UseGuards,
 } from '@nestjs/common';
-import { CreateSessionUseCase } from '../../application';
+import {
+  CreateSessionUseCase,
+  ListOpenSessionsUseCase,
+  ListSessionsRequestDto,
+} from '../../application';
 import { CreateSessionRequestDto } from '../../application';
 import { SessionGuard } from '../../../auth/guards/session.guard';
 import { AuthService } from '../../../auth/application/auth.service';
 import { CurrentUser } from '../../../auth/decorators/current-user.decorator';
 import { User } from '../../../generated/prisma-class/user';
+import { StartSessionUseCase } from '../../application/use-cases/start-session.use-case';
 import { GetGameStateUseCase } from '../../application/use-cases/get-game-state.use-case';
 import { GameStateType } from '../../application/use-cases/types/game-state.type';
 import { DiceRollResultType } from '../../application/use-cases/types/dice-roll-result.type';
@@ -25,12 +32,14 @@ import { RollDiceUseCase } from '../../application/use-cases/roll-dice.use-case'
 import { MoveFigureRequestDto } from '../../application/dtos/move-figure-request.dto';
 import { MoveFigureUseCase } from '../../application/use-cases/move-figure.use-case';
 import {
+  InvalidSessionStatusError,
+  NotEnoughPlayersError,
+  NotHostError,
+  SessionNotFoundError,
   DiceAlreadyRolledError,
   DiceNotRolledError,
   InvalidMoveError,
-  InvalidSessionStatusError,
   NotYourTurnError,
-  SessionNotFoundError,
 } from '../../application/use-cases/errors';
 import { MoveFigureResultType } from '../../application/use-cases/types/move-figure-result.type';
 
@@ -38,12 +47,13 @@ import { MoveFigureResultType } from '../../application/use-cases/types/move-fig
 export class SessionsController {
   constructor(
     private readonly createSessionUseCase: CreateSessionUseCase,
+    private readonly listOpenSessionsUseCase: ListOpenSessionsUseCase,
     private readonly getGameStateUseCase: GetGameStateUseCase,
     private readonly rollDiceUseCase: RollDiceUseCase,
     private readonly moveFigureUseCase: MoveFigureUseCase,
+    private readonly startSessionUseCase: StartSessionUseCase,
     private readonly authService: AuthService,
   ) {}
-
   @Get(':id')
   @UseGuards(SessionGuard)
   async getSession(
@@ -145,7 +155,6 @@ export class SessionsController {
       throw error;
     }
   }
-
   @Post()
   @UseGuards(SessionGuard)
   async createSession(
@@ -153,5 +162,91 @@ export class SessionsController {
     @CurrentUser() user: User,
   ) {
     return this.createSessionUseCase.execute(user.id, request.settings);
+  }
+  @Get()
+  async listOpenSessions(@Query() query: ListSessionsRequestDto) {
+    return this.listOpenSessionsUseCase.execute(query.page, query.size);
+  }
+  @Post(':id/start')
+  @HttpCode(200)
+  @UseGuards(SessionGuard)
+  async startSession(
+    //@Body() request: sessionId,
+    @Param('id') sessionId: string,
+    @CurrentUser() user: User,
+  ): Promise<{
+    sessionId: string;
+    status: string;
+    currentPlayerId: string;
+    playerIdOrder: string[];
+    figures: Array<{
+      id: number;
+      sessionId: string;
+      participantId: string;
+      position: number;
+      status: string;
+    }>;
+  }> {
+    if (!user) {
+      throw new HttpException(
+        {
+          status: 'error',
+          code: 'UNAUTHORIZED',
+          message: 'Authentication required',
+          timestamp: new Date().toISOString(),
+        },
+        401,
+      );
+    }
+
+    try {
+      return await this.startSessionUseCase.execute(sessionId, user);
+    } catch (error) {
+      if (error instanceof NotEnoughPlayersError) {
+        throw new HttpException(
+          {
+            status: 'error',
+            code: 'NOT_ENOUGH_PLAYERS',
+            message: 'At least 2 players are required to start the game',
+            timestamp: new Date().toISOString(),
+          },
+          400,
+        );
+      }
+      if (error instanceof NotHostError) {
+        throw new HttpException(
+          {
+            status: 'error',
+            code: 'NOT_HOST',
+            message: 'Only the host can start the game',
+            timestamp: new Date().toISOString(),
+          },
+          403,
+        );
+      }
+      if (error instanceof InvalidSessionStatusError) {
+        throw new HttpException(
+          {
+            status: 'error',
+            code: 'INVALID_STATUS',
+            message: 'Session is not in WAITING status',
+            timestamp: new Date().toISOString(),
+          },
+          400,
+        );
+      }
+      if (error instanceof SessionNotFoundError) {
+        throw new HttpException(
+          {
+            status: 'error',
+            code: 'SESSION_NOT_FOUND',
+            message: 'Session not found',
+            timestamp: new Date().toISOString(),
+          },
+          404,
+        );
+      }
+      throw error;
+    }
   }
 }

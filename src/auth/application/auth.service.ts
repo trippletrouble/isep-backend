@@ -1,8 +1,7 @@
-import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import {
   CreateUserDto,
-  IUserRepository,
-  USER_REPOSITORY,
+  UserRepositoryPort,
 } from '../ports/user-repository.port';
 import { User } from '../../generated/prisma-class/user';
 import { UserRole } from '../../generated/prisma-client/enums';
@@ -16,10 +15,7 @@ export interface OidcProfile {
 
 @Injectable()
 export class AuthService {
-  constructor(
-    @Inject(USER_REPOSITORY)
-    private readonly userRepository: IUserRepository,
-  ) {}
+  constructor(private readonly userRepository: UserRepositoryPort) {}
 
   async findOrCreateUser(profile: {
     sub: any;

@@ -17,8 +17,8 @@ async function bootstrap() {
     }),
   );
 
-  app.useGlobalInterceptors(new SuccessInterceptor());
-  app.useGlobalFilters(new HttpExceptionFilter());
+  //app.useGlobalInterceptors(new SuccessInterceptor());
+  //app.useGlobalFilters(new HttpExceptionFilter());
 
   app.use(cookieParser());
 
