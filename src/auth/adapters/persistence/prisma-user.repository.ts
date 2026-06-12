@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import {
   CreateUserDto,
+  FinishedParticipationStats,
   UserRepositoryPort,
 } from '../../ports/user-repository.port';
 import { User } from '../../../generated/prisma-class/user';
@@ -33,5 +34,33 @@ export class PrismaUserRepository implements UserRepositoryPort {
         role: dto.role ?? UserRole.PLAYER,
       },
     });
+  }
+
+  async findFinishedParticipationsByUserId(
+    userId: string,
+  ): Promise<FinishedParticipationStats[]> {
+    const participations = await this.prisma.gameParticipant.findMany({
+      where: {
+        userId,
+        session: {
+          status: 'FINISHED',
+        },
+      },
+      select: {
+        figuresCaptured: true,
+        session: {
+          select: {
+            id: true,
+            winnerId: true,
+          },
+        },
+      },
+    });
+
+    return participations.map((participation) => ({
+      sessionId: participation.session.id,
+      winnerId: participation.session.winnerId,
+      figuresCaptured: participation.figuresCaptured,
+    }));
   }
 }
