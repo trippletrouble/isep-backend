@@ -1,7 +1,7 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { SessionRepositoryPort } from '../../ports/session.repository.port';
 import { GameStateType } from './types/game-state.type';
-import { User } from '@prisma/client';
+import { User } from 'src/generated/prisma-class/user';
 
 @Injectable()
 export class GetGameStateUseCase {
