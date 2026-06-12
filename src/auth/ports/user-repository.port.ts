@@ -8,8 +8,17 @@ export interface CreateUserDto {
   role?: UserRole;
 }
 
+export type FinishedParticipationStats = {
+  sessionId: string;
+  winnerId: string | null;
+  figuresCaptured: number;
+};
+
 export abstract class UserRepositoryPort {
   abstract findById(id: string): Promise<User | null>;
   abstract findByKeycloakSub(sub: string): Promise<User | null>;
   abstract create(dto: CreateUserDto): Promise<User>;
+  abstract findFinishedParticipationsByUserId(
+    userId: string,
+  ): Promise<FinishedParticipationStats[]>;
 }
