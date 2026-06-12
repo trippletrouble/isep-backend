@@ -3,7 +3,11 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { SessionRepositoryPort } from './ports';
 import { PrismaSessionRepository } from './adapters';
 import { SessionsController } from './adapters';
-import { CreateSessionUseCase, ListOpenSessionsUseCase } from './application';
+import {
+  CreateSessionUseCase,
+  ListOpenSessionsUseCase,
+  UpdateLobbySettingsUseCase,
+} from './application';
 import { AuthModule } from '../auth/auth.module';
 import { GetGameStateUseCase } from './application/use-cases/get-game-state.use-case';
 import { RollDiceUseCase } from './application/use-cases/roll-dice.use-case';
@@ -43,6 +47,7 @@ export class AppModule {}
     PossibleMoveCalculatorUseCase,
     MoveFigureUseCase,
     HttpDiceClientAdapter,
+    UpdateLobbySettingsUseCase,
     {
       provide: SessionRepositoryPort,
       useClass: PrismaSessionRepository,
@@ -61,6 +66,7 @@ export class AppModule {}
     MoveFigureUseCase,
     GetPossibleMovesUseCase,
     GetLobbyUseCase,
+    UpdateLobbySettingsUseCase,
   ],
 })
 export class SessionModule {}
