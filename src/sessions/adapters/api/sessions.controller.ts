@@ -12,7 +12,6 @@ import {
   ForbiddenException,
   ConflictException,
   NotFoundException,
-  UnauthorizedException,
 } from '@nestjs/common';
 import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
 
@@ -26,15 +25,17 @@ import { SessionGuard } from '../../../auth/guards/session.guard';
 import { AuthService } from '../../../auth/application/auth.service';
 import { CurrentUser } from '../../../auth/decorators/current-user.decorator';
 import { User } from '../../../generated/prisma-class/user';
-import { StartSessionUseCase } from '../../application/use-cases/start-session.use-case';
+import { StartSessionUseCase } from '../../application';
 import { GetGameStateUseCase } from '../../application/use-cases/get-game-state.use-case';
 import { GameStateType } from '../../application/use-cases/types/game-state.type';
 import { DiceRollResultType } from '../../application/use-cases/types/dice-roll-result.type';
 import { RollDiceRequestType } from '../../application/use-cases/types/dice-roll-request.type';
 import { RollDiceUseCase } from '../../application/use-cases/roll-dice.use-case';
-import { MoveFigureRequestDto } from '../../application/dtos/move-figure-request.dto';
-import { MoveFigureUseCase } from '../../application/use-cases/move-figure.use-case';
-import { GetPossibleMovesUseCase } from '../../application/use-cases/get-possible-moves.use-case';
+import { MoveFigureRequestDto } from '../../application';
+import { MoveFigureUseCase } from '../../application';
+import { GetPossibleMovesUseCase } from '../../application';
+import { GetLobbyUseCase } from '../../application';
+import { LobbyDto } from '../../application';
 import { PossibleMovesResultType } from '../../application/use-cases/types/possible-moves-result.type';
 import {
   DiceAlreadyRolledError,
@@ -58,7 +59,7 @@ export class SessionsController {
     private readonly moveFigureUseCase: MoveFigureUseCase,
     private readonly startSessionUseCase: StartSessionUseCase,
     private readonly getPossibleMovesUseCase: GetPossibleMovesUseCase,
-    private readonly authService: AuthService,
+    private readonly getLobbyUseCase: GetLobbyUseCase,
   ) {}
 
   @Get(':id')
@@ -73,6 +74,28 @@ export class SessionsController {
       if (error instanceof SessionNotFoundError) {
         throw new NotFoundException({
           code: 'SESSION_NOT_FOUND',
+          message: error.message,
+        });
+      }
+      throw error;
+    }
+  }
+
+  @Get(':id/lobby')
+  @UseGuards(SessionGuard)
+  async getLobby(@Param('id') sessionId: string): Promise<LobbyDto> {
+    try {
+      return await this.getLobbyUseCase.execute(sessionId);
+    } catch (error) {
+      if (error instanceof SessionNotFoundError) {
+        throw new NotFoundException({
+          code: 'SESSION_NOT_FOUND',
+          message: error.message,
+        });
+      }
+      if (error instanceof InvalidSessionStatusError) {
+        throw new ConflictException({
+          code: 'INVALID_SESSION_STATUS',
           message: error.message,
         });
       }
