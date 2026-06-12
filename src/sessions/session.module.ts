@@ -7,12 +7,13 @@ import { CreateSessionUseCase, ListOpenSessionsUseCase } from './application';
 import { AuthModule } from '../auth/auth.module';
 import { GetGameStateUseCase } from './application/use-cases/get-game-state.use-case';
 import { RollDiceUseCase } from './application/use-cases/roll-dice.use-case';
-import { GetPossibleMovesUseCase } from './application/use-cases/get-possible-moves.use-case';
+import { GetPossibleMovesUseCase } from './application';
+import { GetLobbyUseCase } from './application';
 import { PossibleMoveCalculatorUseCase } from './application/use-cases/possible-move-calculator.use-case';
-import { MoveFigureUseCase } from './application/use-cases/move-figure.use-case';
+import { MoveFigureUseCase } from './application';
 import { DiceClientPort } from './ports/dice-client.port';
 import { HttpDiceClientAdapter } from './adapters/dice/http-dice-client.adapter';
-import { StartSessionUseCase } from './application/use-cases/start-session.use-case';
+import { StartSessionUseCase } from './application';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
 
@@ -38,6 +39,7 @@ export class AppModule {}
     GetGameStateUseCase,
     RollDiceUseCase,
     GetPossibleMovesUseCase,
+    GetLobbyUseCase,
     PossibleMoveCalculatorUseCase,
     MoveFigureUseCase,
     HttpDiceClientAdapter,
@@ -58,6 +60,7 @@ export class AppModule {}
     RollDiceUseCase,
     MoveFigureUseCase,
     GetPossibleMovesUseCase,
+    GetLobbyUseCase,
   ],
 })
 export class SessionModule {}

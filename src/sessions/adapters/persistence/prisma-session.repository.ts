@@ -16,7 +16,7 @@ export class PrismaSessionRepository implements SessionRepositoryPort {
     sessionId: string,
     userId: string,
   ): Promise<GameParticipant | null> {
-    return await this.prisma.gameParticipant.findUnique({
+    return this.prisma.gameParticipant.findUnique({
       where: {
         sessionId_userId: {
           sessionId: sessionId,
@@ -398,7 +398,18 @@ export class PrismaSessionRepository implements SessionRepositoryPort {
     return this.prisma.session.findUnique({
       where: { id },
       include: {
-        participants: true,
+        participants: {
+          include: {
+            user: {
+              select: {
+                username: true,
+              },
+            },
+          },
+          orderBy: {
+            joinedAt: 'asc',
+          },
+        },
       },
     });
   }
