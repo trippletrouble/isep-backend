@@ -5,6 +5,8 @@ import { GameStateType } from '../application/use-cases/types/game-state.type';
 import { SessionWithParticipants } from '../application/use-cases/types';
 import { ParticipantDto } from '../application/dtos/participant.dto';
 import { GameParticipant } from '../../generated/prisma-class/game_participant';
+import { ApplyMoveData } from '../application/use-cases/types/apply-move-data.type';
+
 export abstract class SessionRepositoryPort {
   abstract createSession(
     hostId: string,
@@ -14,6 +16,10 @@ export abstract class SessionRepositoryPort {
   abstract findByIdMinimal(id: string): Promise<Session | null>;
   abstract findUserById(id: string): Promise<User | null>;
   abstract findGameStateById(id: string): Promise<GameStateType | null>;
+  abstract findParticipant(
+    sessionId: string,
+    userId: string,
+  ): Promise<GameParticipant | null>;
   abstract updateAfterDiceRoll(
     sessionId: string,
     data: {
@@ -37,4 +43,5 @@ export abstract class SessionRepositoryPort {
   ): Promise<{ items: Session[]; total: number }>;
   abstract removeParticipant(sessionId: string, userId: string): Promise<void>;
   abstract deleteSession(sessionId: string): Promise<void>;
+  abstract applyMove(data: ApplyMoveData): Promise<void>;
 }

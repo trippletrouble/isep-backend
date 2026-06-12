@@ -12,12 +12,14 @@ import {
 import { AuthModule } from '../auth/auth.module';
 import { GetGameStateUseCase } from './application/use-cases/get-game-state.use-case';
 import { RollDiceUseCase } from './application/use-cases/roll-dice.use-case';
+import { GetPossibleMovesUseCase } from './application';
+import { GetLobbyUseCase } from './application';
 import { PossibleMoveCalculatorUseCase } from './application/use-cases/possible-move-calculator.use-case';
+import { MoveFigureUseCase } from './application';
 import { DiceClientPort } from './ports/dice-client.port';
 import { HttpDiceClientAdapter } from './adapters/dice/http-dice-client.adapter';
 import { StartSessionUseCase } from './application';
 import { ConfigModule } from '@nestjs/config';
-// app.module.ts
 import { ThrottlerModule } from '@nestjs/throttler';
 
 export class AppModule {}
@@ -43,7 +45,10 @@ export class AppModule {}
     ReconnectUseCase,
     GetGameStateUseCase,
     RollDiceUseCase,
+    GetPossibleMovesUseCase,
+    GetLobbyUseCase,
     PossibleMoveCalculatorUseCase,
+    MoveFigureUseCase,
     HttpDiceClientAdapter,
     {
       provide: SessionRepositoryPort,
@@ -62,6 +67,9 @@ export class AppModule {}
     RollDiceUseCase,
     LeaveSessionUseCase,
     ReconnectUseCase,
+    MoveFigureUseCase,
+    GetPossibleMovesUseCase,
+    GetLobbyUseCase,
   ],
 })
 export class SessionModule {}

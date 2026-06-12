@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { PieceStatus } from '@prisma/client';
+import { PieceStatus } from 'src/generated/prisma-client/client';
 import { SessionRepositoryPort } from '../../ports';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { User } from '../../../generated/prisma-class/user';
