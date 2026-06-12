@@ -3,14 +3,19 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { SessionRepositoryPort } from './ports';
 import { PrismaSessionRepository } from './adapters';
 import { SessionsController } from './adapters';
-import { CreateSessionUseCase, ListOpenSessionsUseCase } from './application';
+import {
+  CreateSessionUseCase,
+  ListOpenSessionsUseCase,
+  LeaveSessionUseCase,
+  ReconnectUseCase,
+} from './application';
 import { AuthModule } from '../auth/auth.module';
 import { GetGameStateUseCase } from './application/use-cases/get-game-state.use-case';
 import { RollDiceUseCase } from './application/use-cases/roll-dice.use-case';
 import { PossibleMoveCalculatorUseCase } from './application/use-cases/possible-move-calculator.use-case';
 import { DiceClientPort } from './ports/dice-client.port';
 import { HttpDiceClientAdapter } from './adapters/dice/http-dice-client.adapter';
-import { StartSessionUseCase } from './application/use-cases/start-session.use-case';
+import { StartSessionUseCase } from './application';
 import { ConfigModule } from '@nestjs/config';
 // app.module.ts
 import { ThrottlerModule } from '@nestjs/throttler';
@@ -34,6 +39,8 @@ export class AppModule {}
     GetGameStateUseCase,
     StartSessionUseCase,
     ListOpenSessionsUseCase,
+    LeaveSessionUseCase,
+    ReconnectUseCase,
     GetGameStateUseCase,
     RollDiceUseCase,
     PossibleMoveCalculatorUseCase,
@@ -53,6 +60,8 @@ export class AppModule {}
     CreateSessionUseCase,
     ListOpenSessionsUseCase,
     RollDiceUseCase,
+    LeaveSessionUseCase,
+    ReconnectUseCase,
   ],
 })
 export class SessionModule {}

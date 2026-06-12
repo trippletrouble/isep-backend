@@ -12,6 +12,7 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  Delete,
 } from '@nestjs/common';
 import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
 
@@ -19,13 +20,15 @@ import {
   CreateSessionUseCase,
   ListOpenSessionsUseCase,
   ListSessionsRequestDto,
+  LeaveSessionUseCase,
+  ReconnectUseCase,
 } from '../../application';
 import { CreateSessionRequestDto } from '../../application';
 import { SessionGuard } from '../../../auth/guards/session.guard';
 import { AuthService } from '../../../auth/application/auth.service';
 import { CurrentUser } from '../../../auth/decorators/current-user.decorator';
 import { User } from '../../../generated/prisma-class/user';
-import { StartSessionUseCase } from '../../application/use-cases/start-session.use-case';
+import { StartSessionUseCase } from '../../application';
 import { GetGameStateUseCase } from '../../application/use-cases/get-game-state.use-case';
 import { GameStateType } from '../../application/use-cases/types/game-state.type';
 import { DiceRollResultType } from '../../application/use-cases/types/dice-roll-result.type';
@@ -38,6 +41,7 @@ import {
   SessionNotFoundError,
   DiceAlreadyRolledError,
   NotYourTurnError,
+  ParticipantNotFoundError,
 } from '../../application/use-cases/errors';
 
 @Controller('sessions')
@@ -48,6 +52,8 @@ export class SessionsController {
     private readonly rollDiceUseCase: RollDiceUseCase,
     private readonly startSessionUseCase: StartSessionUseCase,
     private readonly getGameStateUseCase: GetGameStateUseCase,
+    private readonly leaveSessionUseCase: LeaveSessionUseCase,
+    private readonly reconnectUseCase: ReconnectUseCase,
     private readonly authService: AuthService,
   ) {}
   @Get(':id')
@@ -187,6 +193,59 @@ export class SessionsController {
           },
           404,
         );
+      }
+      throw error;
+    }
+  }
+
+  @Delete(':id/leave')
+  @HttpCode(200)
+  @UseGuards(SessionGuard)
+  async leaveSession(
+    @Param('id') sessionId: string,
+    @CurrentUser() user: User,
+  ) {
+    try {
+      await this.leaveSessionUseCase.execute(sessionId, user.id);
+      return { message: 'Successfully left session' };
+    } catch (error) {
+      if (error instanceof SessionNotFoundError) {
+        throw new NotFoundException({
+          code: 'SESSION_NOT_FOUND',
+          message: error.message,
+        });
+      }
+      if (error instanceof ParticipantNotFoundError) {
+        throw new NotFoundException({
+          code: 'PARTICIPANT_NOT_FOUND',
+          message: error.message,
+        });
+      }
+      throw error;
+    }
+  }
+
+  @Post(':id/reconnect')
+  @HttpCode(200)
+  @UseGuards(SessionGuard)
+  async reconnectSession(
+    @Param('id') sessionId: string,
+    @CurrentUser() user: User,
+  ) {
+    try {
+      return await this.reconnectUseCase.execute(sessionId, user.id);
+    } catch (error) {
+      if (error instanceof SessionNotFoundError) {
+        throw new NotFoundException({
+          code: 'SESSION_NOT_FOUND',
+          message: error.message,
+        });
+      }
+      if (error instanceof ParticipantNotFoundError) {
+        throw new NotFoundException({
+          code: 'PARTICIPANT_NOT_FOUND',
+          message: error.message,
+        });
       }
       throw error;
     }
