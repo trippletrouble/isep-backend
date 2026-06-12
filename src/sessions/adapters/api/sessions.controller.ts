@@ -43,8 +43,6 @@ import {
   NotEnoughPlayersError,
   NotHostError,
   SessionNotFoundError,
-  DiceAlreadyRolledError,
-  DiceNotRolledError,
   InvalidMoveError,
   NotYourTurnError,
 } from '../../application/use-cases/errors';
