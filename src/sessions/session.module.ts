@@ -7,6 +7,7 @@ import { CreateSessionUseCase, ListOpenSessionsUseCase } from './application';
 import { AuthModule } from '../auth/auth.module';
 import { GetGameStateUseCase } from './application/use-cases/get-game-state.use-case';
 import { RollDiceUseCase } from './application/use-cases/roll-dice.use-case';
+import { GetPossibleMovesUseCase } from './application/use-cases/get-possible-moves.use-case';
 import { PossibleMoveCalculatorUseCase } from './application/use-cases/possible-move-calculator.use-case';
 import { MoveFigureUseCase } from './application/use-cases/move-figure.use-case';
 import { DiceClientPort } from './ports/dice-client.port';
@@ -36,6 +37,7 @@ export class AppModule {}
     ListOpenSessionsUseCase,
     GetGameStateUseCase,
     RollDiceUseCase,
+    GetPossibleMovesUseCase,
     PossibleMoveCalculatorUseCase,
     MoveFigureUseCase,
     HttpDiceClientAdapter,
@@ -55,6 +57,7 @@ export class AppModule {}
     ListOpenSessionsUseCase,
     RollDiceUseCase,
     MoveFigureUseCase,
+    GetPossibleMovesUseCase,
   ],
 })
 export class SessionModule {}

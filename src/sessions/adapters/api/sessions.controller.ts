@@ -34,7 +34,11 @@ import { RollDiceRequestType } from '../../application/use-cases/types/dice-roll
 import { RollDiceUseCase } from '../../application/use-cases/roll-dice.use-case';
 import { MoveFigureRequestDto } from '../../application/dtos/move-figure-request.dto';
 import { MoveFigureUseCase } from '../../application/use-cases/move-figure.use-case';
+import { GetPossibleMovesUseCase } from '../../application/use-cases/get-possible-moves.use-case';
+import { PossibleMovesResultType } from '../../application/use-cases/types/possible-moves-result.type';
 import {
+  DiceAlreadyRolledError,
+  DiceNotRolledError,
   InvalidSessionStatusError,
   NotEnoughPlayersError,
   NotHostError,
@@ -55,8 +59,10 @@ export class SessionsController {
     private readonly rollDiceUseCase: RollDiceUseCase,
     private readonly moveFigureUseCase: MoveFigureUseCase,
     private readonly startSessionUseCase: StartSessionUseCase,
+    private readonly getPossibleMovesUseCase: GetPossibleMovesUseCase,
     private readonly authService: AuthService,
   ) {}
+
   @Get(':id')
   @UseGuards(SessionGuard)
   async getSession(
@@ -126,6 +132,47 @@ export class SessionsController {
     }
   }
 
+  @Get(':id/possible-moves')
+  @UseGuards(SessionGuard)
+  async getPossibleMoves(
+    @Param('id') sessionId: string,
+    @CurrentUser() user: User,
+  ): Promise<PossibleMovesResultType> {
+    try {
+      return await this.getPossibleMovesUseCase.execute(sessionId, user.id);
+    } catch (error) {
+      if (error instanceof DiceNotRolledError) {
+        throw new BadRequestException({
+          code: 'DICE_NOT_ROLLED',
+          message: error.message,
+        });
+      }
+
+      if (error instanceof NotYourTurnError) {
+        throw new ForbiddenException({
+          code: 'NOT_YOUR_TURN',
+          message: error.message,
+        });
+      }
+
+      if (error instanceof SessionNotFoundError) {
+        throw new NotFoundException({
+          code: 'SESSION_NOT_FOUND',
+          message: error.message,
+        });
+      }
+
+      if (error instanceof InvalidSessionStatusError) {
+        throw new ConflictException({
+          code: 'INVALID_SESSION_STATUS',
+          message: error.message,
+        });
+      }
+
+      throw error;
+    }
+  }
+
   @Post(':id/rolls')
   @HttpCode(200)
   @Throttle({ default: { limit: 1000, ttl: 10 * 60 * 1000 } })
@@ -171,6 +218,7 @@ export class SessionsController {
       throw error;
     }
   }
+
   @Post()
   @UseGuards(SessionGuard)
   async createSession(

@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { SessionRepositoryPort } from 'src/sessions/ports';
 import { DiceClientPort } from 'src/sessions/ports/dice-client.port';
 import { PossibleMoveCalculatorUseCase } from './possible-move-calculator.use-case';
