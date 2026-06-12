@@ -6,7 +6,7 @@ import { Session } from 'src/generated/prisma-class/session';
 import { User } from 'src/generated/prisma-class/user';
 import { GameStateType } from 'src/sessions/application/use-cases/types/game-state.type';
 import { SessionWithParticipants } from '../../application/use-cases/types';
-import { Prisma } from '@prisma/client';
+import { Prisma } from 'src/generated/prisma-client/client';
 import { GameParticipant } from '../../../generated/prisma-class/game_participant';
 import { ApplyMoveData } from '../../application/use-cases/types/apply-move-data.type';
 @Injectable()
