@@ -13,7 +13,7 @@ import { GetGameStateUseCase } from './application/use-cases/get-game-state.use-
 import { RollDiceUseCase } from './application/use-cases/roll-dice.use-case';
 import { GetPossibleMovesUseCase } from './application';
 import { GetLobbyUseCase } from './application';
-import { PossibleMoveCalculatorUseCase } from './application/use-cases/possible-move-calculator.use-case';
+import { LudoEngine } from './domain';
 import { MoveFigureUseCase } from './application';
 import { DiceClientPort } from './ports/dice-client.port';
 import { HttpDiceClientAdapter } from './adapters/dice/http-dice-client.adapter';
@@ -44,7 +44,7 @@ export class AppModule {}
     RollDiceUseCase,
     GetPossibleMovesUseCase,
     GetLobbyUseCase,
-    PossibleMoveCalculatorUseCase,
+    LudoEngine,
     MoveFigureUseCase,
     HttpDiceClientAdapter,
     UpdateLobbySettingsUseCase,

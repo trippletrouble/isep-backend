@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { SessionRepositoryPort } from 'src/sessions/ports';
 import { DiceClientPort } from 'src/sessions/ports/dice-client.port';
-import { PossibleMoveCalculatorUseCase } from './possible-move-calculator.use-case';
+import { LudoEngine } from '../../domain';
 import {
   DiceAlreadyRolledError,
   InvalidSessionStatusError,
@@ -16,7 +16,7 @@ export class RollDiceUseCase {
     private readonly sessionRepository: SessionRepositoryPort,
     @Inject(DiceClientPort)
     private readonly diceClient: DiceClientPort,
-    private readonly possibleMoveCalculator: PossibleMoveCalculatorUseCase,
+    private readonly ludoEngine: LudoEngine,
   ) {}
 
   async execute(
@@ -42,23 +42,15 @@ export class RollDiceUseCase {
     }
 
     const value = await this.diceClient.roll();
-    const consecutiveSixes = value === 6 ? gameState.consecutiveSixes + 1 : 0;
-    const possibleMoves = this.possibleMoveCalculator.calculate(
-      gameState,
-      playerId,
-      value,
-    );
-    const hasMoves = possibleMoves.length > 0;
-    const turnForfeit = consecutiveSixes >= 3;
-    const rollAgain = value === 6 && !turnForfeit && hasMoves;
+    const result = this.ludoEngine.handleRoll(gameState, value);
 
     await this.sessionRepository.updateAfterDiceRoll(sessionId, {
       lastDiceValue: value,
-      diceRolledThisTurn: !turnForfeit,
-      consecutiveSixes,
+      diceRolledThisTurn: !result.turnForfeit,
+      consecutiveSixes: result.consecutiveSixes,
     });
 
-    if (!hasMoves || turnForfeit) {
+    if (!result.hasMoves || result.turnForfeit) {
       await this.sessionRepository.passTurn(sessionId, playerId);
     }
 
@@ -72,11 +64,11 @@ export class RollDiceUseCase {
     return {
       value,
       playerId,
-      possibleMoves,
-      hasMoves,
-      rollAgain,
-      consecutiveSixes,
-      turnForfeit,
+      possibleMoves: result.possibleMoves,
+      hasMoves: result.hasMoves,
+      rollAgain: result.rollAgain,
+      consecutiveSixes: result.consecutiveSixes,
+      turnForfeit: result.turnForfeit,
       gameState: updatedGameState,
     };
   }
