@@ -6,6 +6,7 @@ import {
   LobbyFullError,
   ColorAlreadyTakenError,
   InvalidInviteTokenError,
+  InviteTokenExpiredError,
 } from './errors';
 import {
   PlayerColor,
@@ -50,6 +51,12 @@ export class JoinSessionUseCase {
     if (session.isPrivate) {
       if (!inviteToken || inviteToken !== session.inviteToken) {
         throw new InvalidInviteTokenError();
+      }
+      if (
+        session.inviteTokenExpiresAt &&
+        new Date() > session.inviteTokenExpiresAt
+      ) {
+        throw new InviteTokenExpiredError();
       }
     }
 

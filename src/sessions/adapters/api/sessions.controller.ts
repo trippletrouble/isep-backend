@@ -22,6 +22,8 @@ import {
   ListSessionsRequestDto,
   JoinSessionRequestDto,
   JoinSessionUseCase,
+  GenerateInviteUseCase,
+  InviteResponseDto,
 } from '../../application';
 import { CreateSessionRequestDto } from '../../application';
 import { SessionGuard } from '../../../auth/guards/session.guard';
@@ -53,6 +55,8 @@ import {
   LobbyFullError,
   ColorAlreadyTakenError,
   InvalidInviteTokenError,
+  OnlyHostCanInviteError,
+  InviteTokenExpiredError,
 } from '../../application/use-cases/errors';
 import { MoveFigureResultType } from '../../application/use-cases/types/move-figure-result.type';
 
@@ -69,6 +73,7 @@ export class SessionsController {
     private readonly getLobbyUseCase: GetLobbyUseCase,
     private readonly updateLobbySettingsUseCase: UpdateLobbySettingsUseCase,
     private readonly joinSessionUseCase: JoinSessionUseCase,
+    private readonly generateInviteUseCase: GenerateInviteUseCase,
   ) {}
 
   @Get(':id')
@@ -343,9 +348,48 @@ export class SessionsController {
           message: error.message,
         });
       }
+      if (error instanceof InviteTokenExpiredError) {
+        throw new ForbiddenException({
+          code: 'INVITE_TOKEN_EXPIRED',
+          message: error.message,
+        });
+      }
       throw error;
     }
   }
+
+  @Post(':id/invite')
+  @HttpCode(200)
+  @UseGuards(SessionGuard)
+  async generateInvite(
+    @Param('id') sessionId: string,
+    @CurrentUser() user: User,
+  ): Promise<InviteResponseDto> {
+    try {
+      return await this.generateInviteUseCase.execute(sessionId, user.id);
+    } catch (error) {
+      if (error instanceof SessionNotFoundError) {
+        throw new NotFoundException({
+          code: 'SESSION_NOT_FOUND',
+          message: error.message,
+        });
+      }
+      if (error instanceof InvalidSessionStatusError) {
+        throw new ConflictException({
+          code: 'INVALID_SESSION_STATUS',
+          message: error.message,
+        });
+      }
+      if (error instanceof OnlyHostCanInviteError) {
+        throw new ForbiddenException({
+          code: 'ONLY_HOST_CAN_INVITE',
+          message: error.message,
+        });
+      }
+      throw error;
+    }
+  }
+
   @Post(':id/start')
   @HttpCode(200)
   @UseGuards(SessionGuard)

@@ -8,6 +8,7 @@ import {
   ListOpenSessionsUseCase,
   UpdateLobbySettingsUseCase,
   JoinSessionUseCase,
+  GenerateInviteUseCase,
 } from './application';
 import { AuthModule } from '../auth/auth.module';
 import { GetGameStateUseCase } from './application/use-cases/get-game-state.use-case';
@@ -50,6 +51,7 @@ export class AppModule {}
     HttpDiceClientAdapter,
     UpdateLobbySettingsUseCase,
     JoinSessionUseCase,
+    GenerateInviteUseCase,
     {
       provide: SessionRepositoryPort,
       useClass: PrismaSessionRepository,
@@ -70,6 +72,7 @@ export class AppModule {}
     GetLobbyUseCase,
     UpdateLobbySettingsUseCase,
     JoinSessionUseCase,
+    GenerateInviteUseCase,
   ],
 })
 export class SessionModule {}

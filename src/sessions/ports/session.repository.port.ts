@@ -30,6 +30,11 @@ export abstract class SessionRepositoryPort {
   ): Promise<void>;
   abstract addInviteToken(sessionId: string, inviteToken: string);
   abstract findByInviteToken(inviteToken: string): Promise<Session | null>;
+  abstract updateSessionInvite(
+    sessionId: string,
+    inviteToken: ***ENTFERNT*** | null,
+    inviteTokenExpiresAt: ***ENTFERNT*** | null,
+  ): Promise<void>;
 
   abstract passTurn(sessionId: string, currentPlayerId: string): Promise<void>;
   abstract updateSessionById(
