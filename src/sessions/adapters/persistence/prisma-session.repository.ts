@@ -9,6 +9,7 @@ import { SessionWithParticipants } from '../../application/use-cases/types';
 import { Prisma } from 'src/generated/prisma-client/client';
 import { GameParticipant } from '../../../generated/prisma-class/game_participant';
 import { ApplyMoveData } from '../../application/use-cases/types/apply-move-data.type';
+
 @Injectable()
 export class PrismaSessionRepository implements SessionRepositoryPort {
   constructor(private readonly prisma: PrismaService) {}
@@ -94,7 +95,7 @@ export class PrismaSessionRepository implements SessionRepositoryPort {
   async createParticipant(
     participant: GameParticipant,
   ): Promise<GameParticipant | null> {
-    const promis_participant = await this.prisma.gameParticipant.create({
+    return await this.prisma.gameParticipant.create({
       data: {
         sessionId: participant.sessionId,
         userId: participant.userId,
@@ -110,7 +111,6 @@ export class PrismaSessionRepository implements SessionRepositoryPort {
         joinedAt: participant.joinedAt,
       },
     });
-    return promis_participant;
   }
 
   async createSession(
@@ -147,6 +147,22 @@ export class PrismaSessionRepository implements SessionRepositoryPort {
       },
     });
   }
+
+  async addInviteToken(sessionId: string, inviteToken: string) {
+    await this.prisma.session.update({
+      where: { id: sessionId },
+      data: {
+        inviteToken: ***ENTFERNT***
+      },
+    });
+  }
+
+  findByInviteToken(inviteToken: string): Promise<Session | null> {
+    return this.prisma.session.findUnique({
+      where: { inviteToken: inviteToken },
+    });
+  }
+
   async passTurn(sessionId: string, currentPlayerId: string): Promise<void> {
     const sessionWithParticipants = await this.prisma.session.findUnique({
       where: { id: sessionId },
