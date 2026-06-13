@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Controller,
   Post,
+  Put,
   Body,
   UseGuards,
   Param,
@@ -22,7 +23,6 @@ import {
 } from '../../application';
 import { CreateSessionRequestDto } from '../../application';
 import { SessionGuard } from '../../../auth/guards/session.guard';
-import { AuthService } from '../../../auth/application/auth.service';
 import { CurrentUser } from '../../../auth/decorators/current-user.decorator';
 import { User } from '../../../generated/prisma-class/user';
 import { StartSessionUseCase } from '../../application';
@@ -35,7 +35,9 @@ import { MoveFigureRequestDto } from '../../application';
 import { MoveFigureUseCase } from '../../application';
 import { GetPossibleMovesUseCase } from '../../application';
 import { GetLobbyUseCase } from '../../application';
+import { UpdateLobbySettingsUseCase } from '../../application';
 import { LobbyDto } from '../../application';
+import { LobbySettingsDto } from '../../application/dtos/lobby-settings.dto';
 import { PossibleMovesResultType } from '../../application/use-cases/types/possible-moves-result.type';
 import {
   DiceAlreadyRolledError,
@@ -60,6 +62,7 @@ export class SessionsController {
     private readonly startSessionUseCase: StartSessionUseCase,
     private readonly getPossibleMovesUseCase: GetPossibleMovesUseCase,
     private readonly getLobbyUseCase: GetLobbyUseCase,
+    private readonly updateLobbySettingsUseCase: UpdateLobbySettingsUseCase,
   ) {}
 
   @Get(':id')
@@ -90,6 +93,42 @@ export class SessionsController {
       if (error instanceof SessionNotFoundError) {
         throw new NotFoundException({
           code: 'SESSION_NOT_FOUND',
+          message: error.message,
+        });
+      }
+      if (error instanceof InvalidSessionStatusError) {
+        throw new ConflictException({
+          code: 'INVALID_SESSION_STATUS',
+          message: error.message,
+        });
+      }
+      throw error;
+    }
+  }
+
+  @Put(':id/lobby')
+  @UseGuards(SessionGuard)
+  async updateLobbySettings(
+    @Param('id') sessionId: string,
+    @Body() settings: LobbySettingsDto,
+    @CurrentUser() user: User,
+  ): Promise<LobbySettingsDto> {
+    try {
+      return await this.updateLobbySettingsUseCase.execute(
+        sessionId,
+        user.id,
+        settings,
+      );
+    } catch (error) {
+      if (error instanceof SessionNotFoundError) {
+        throw new NotFoundException({
+          code: 'SESSION_NOT_FOUND',
+          message: error.message,
+        });
+      }
+      if (error instanceof NotHostError) {
+        throw new ForbiddenException({
+          code: 'NOT_HOST',
           message: error.message,
         });
       }
