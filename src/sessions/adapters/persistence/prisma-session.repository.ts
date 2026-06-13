@@ -9,6 +9,8 @@ import { SessionWithParticipants } from '../../application/use-cases/types';
 import { Prisma } from 'src/generated/prisma-client/client';
 import { GameParticipant } from '../../../generated/prisma-class/game_participant';
 import { ApplyMoveData } from '../../application/use-cases/types/apply-move-data.type';
+import { GameHistoryEventDto } from '../../application/dtos/game-history-event.dto';
+
 @Injectable()
 export class PrismaSessionRepository implements SessionRepositoryPort {
   constructor(private readonly prisma: PrismaService) {}
@@ -477,4 +479,19 @@ export class PrismaSessionRepository implements SessionRepositoryPort {
       data: updatePayload,
     });
   }
+
+  async findHistoryBySessionId(
+    sessionId: string,
+  ): Promise<GameHistoryEventDto[]> {
+    const events = await this.prisma.gameHistoryEvent.findMany({
+      where: { sessionId },
+      orderBy: { sequenceNr: 'asc' },
+    });
+
+    return events.map((e) => ({
+      ...e,
+      createdAt: e.createdAt.toISOString(),
+    }));
+  }
 }
+

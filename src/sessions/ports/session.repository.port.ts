@@ -6,6 +6,8 @@ import { SessionWithParticipants } from '../application/use-cases/types';
 import { ParticipantDto } from '../application/dtos/participant.dto';
 import { GameParticipant } from '../../generated/prisma-class/game_participant';
 import { ApplyMoveData } from '../application/use-cases/types/apply-move-data.type';
+import { GameHistoryEventDto } from '../application/dtos/game-history-event.dto';
+
 
 export abstract class SessionRepositoryPort {
   abstract createSession(
@@ -42,4 +44,6 @@ export abstract class SessionRepositoryPort {
     size: number,
   ): Promise<{ items: Session[]; total: number }>;
   abstract applyMove(data: ApplyMoveData): Promise<void>;
+  abstract findHistoryBySessionId(sessionId: string): Promise<GameHistoryEventDto[]>;
 }
+

@@ -7,6 +7,7 @@ import {
   CreateSessionUseCase,
   ListOpenSessionsUseCase,
   UpdateLobbySettingsUseCase,
+  GetHistoryUseCase,
 } from './application';
 import { AuthModule } from '../auth/auth.module';
 import { GetGameStateUseCase } from './application/use-cases/get-game-state.use-case';
@@ -48,6 +49,7 @@ export class AppModule {}
     MoveFigureUseCase,
     HttpDiceClientAdapter,
     UpdateLobbySettingsUseCase,
+    GetHistoryUseCase,
     {
       provide: SessionRepositoryPort,
       useClass: PrismaSessionRepository,
