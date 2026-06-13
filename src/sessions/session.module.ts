@@ -20,6 +20,7 @@ import { HttpDiceClientAdapter } from './adapters/dice/http-dice-client.adapter'
 import { StartSessionUseCase } from './application';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { SessionSseService } from './session-sse.service';
 
 export class AppModule {}
 @Module({
@@ -48,6 +49,7 @@ export class AppModule {}
     MoveFigureUseCase,
     HttpDiceClientAdapter,
     UpdateLobbySettingsUseCase,
+    SessionSseService,
     {
       provide: SessionRepositoryPort,
       useClass: PrismaSessionRepository,
@@ -67,6 +69,7 @@ export class AppModule {}
     GetPossibleMovesUseCase,
     GetLobbyUseCase,
     UpdateLobbySettingsUseCase,
+    SessionSseService,
   ],
 })
 export class SessionModule {}
