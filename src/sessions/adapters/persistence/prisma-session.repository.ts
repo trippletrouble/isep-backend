@@ -420,6 +420,13 @@ export class PrismaSessionRepository implements SessionRepositoryPort {
     });
   }
 
+  async deleteSessionById(id: string): Promise<void> {
+    await this.prisma.session.delete({
+      where: { id },
+    });
+  }
+
+
   async findUserById(id: string): Promise<User | null> {
     return this.prisma.user.findUnique({
       where: { id },

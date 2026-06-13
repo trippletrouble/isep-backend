@@ -13,6 +13,7 @@ import {
   ForbiddenException,
   ConflictException,
   NotFoundException,
+  Delete,
 } from '@nestjs/common';
 import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
 
@@ -20,6 +21,7 @@ import {
   CreateSessionUseCase,
   ListOpenSessionsUseCase,
   ListSessionsRequestDto,
+  DeleteSessionUseCase,
 } from '../../application';
 import { CreateSessionRequestDto } from '../../application';
 import { SessionGuard } from '../../../auth/guards/session.guard';
@@ -63,6 +65,7 @@ export class SessionsController {
     private readonly getPossibleMovesUseCase: GetPossibleMovesUseCase,
     private readonly getLobbyUseCase: GetLobbyUseCase,
     private readonly updateLobbySettingsUseCase: UpdateLobbySettingsUseCase,
+    private readonly deleteSessionUseCase: DeleteSessionUseCase,
   ) {}
 
   @Get(':id')
@@ -357,4 +360,37 @@ export class SessionsController {
       throw error;
     }
   }
+
+  @Delete(':id')
+  @HttpCode(204)
+  @UseGuards(SessionGuard)
+  async deleteSession(
+    @Param('id') sessionId: string,
+    @CurrentUser() user: User,
+  ): Promise<void> {
+    try {
+      await this.deleteSessionUseCase.execute(sessionId, user.id);
+    } catch (error) {
+      if (error instanceof SessionNotFoundError) {
+        throw new NotFoundException({
+          code: 'SESSION_NOT_FOUND',
+          message: error.message,
+        });
+      }
+      if (error instanceof NotHostError) {
+        throw new ForbiddenException({
+          code: 'NOT_HOST',
+          message: error.message,
+        });
+      }
+      if (error instanceof InvalidSessionStatusError) {
+        throw new ConflictException({
+          code: 'INVALID_SESSION_STATUS',
+          message: error.message,
+        });
+      }
+      throw error;
+    }
+  }
 }
+
