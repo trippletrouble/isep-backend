@@ -246,7 +246,7 @@ export class SessionsController {
       return await this.rollDiceUseCase.execute(sessionId, user.id);
     } catch (error) {
       if (error instanceof NotYourTurnError) {
-        throw new BadRequestException({
+        throw new ForbiddenException({
           code: 'NOT_YOUR_TURN',
           message: error.message,
         });
