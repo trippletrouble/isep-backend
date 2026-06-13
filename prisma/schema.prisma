@@ -15,7 +15,7 @@ generator prismaClassGenerator {
   dryRun                  = false
   separateRelationFields  = true
   usePrismaJsonValue      = true
-  clientImportPath        = "../prisma-client"
+  clientImportPath        = "../prisma-client/"
   preserveDefaultNullable = true
 }
 

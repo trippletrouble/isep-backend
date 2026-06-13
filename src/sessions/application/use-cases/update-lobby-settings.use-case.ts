@@ -48,14 +48,11 @@ export class UpdateLobbySettingsUseCase {
 
     return new LobbySettingsDto(
       updated.numberOfPlayers,
-      updated.mode as 'CLASSIC',
-      updated.boardTheme as 'CLASSIC',
+      updated.mode,
+      updated.boardTheme,
       updated.isPrivate,
       updated.turnTimeLimitSeconds as number,
-      updated.additionalRules as (
-        | 'THROW_AGAIN_ON_6'
-        | 'THREE_SIXES_LOSE_TURN'
-        )[],
+      updated.additionalRules,
     );
   }
 }

@@ -20,6 +20,8 @@ import {
   CreateSessionUseCase,
   ListOpenSessionsUseCase,
   ListSessionsRequestDto,
+  GetSessionPlayersUseCase,
+  PlayerResponseDto,
 } from '../../application';
 import { CreateSessionRequestDto } from '../../application';
 import { SessionGuard } from '../../../auth/guards/session.guard';
@@ -63,6 +65,7 @@ export class SessionsController {
     private readonly getPossibleMovesUseCase: GetPossibleMovesUseCase,
     private readonly getLobbyUseCase: GetLobbyUseCase,
     private readonly updateLobbySettingsUseCase: UpdateLobbySettingsUseCase,
+    private readonly getSessionPlayersUseCase: GetSessionPlayersUseCase,
   ) {}
 
   @Get(':id')
@@ -73,6 +76,24 @@ export class SessionsController {
   ): Promise<GameStateType> {
     try {
       return this.getGameStateUseCase.execute(user, sessionId);
+    } catch (error) {
+      if (error instanceof SessionNotFoundError) {
+        throw new NotFoundException({
+          code: 'SESSION_NOT_FOUND',
+          message: error.message,
+        });
+      }
+      throw error;
+    }
+  }
+
+  @Get(':id/players')
+  @UseGuards(SessionGuard)
+  async getSessionPlayers(
+    @Param('id') sessionId: string,
+  ): Promise<PlayerResponseDto[]> {
+    try {
+      return await this.getSessionPlayersUseCase.execute(sessionId);
     } catch (error) {
       if (error instanceof SessionNotFoundError) {
         throw new NotFoundException({
