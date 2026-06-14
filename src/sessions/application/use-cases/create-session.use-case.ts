@@ -1,10 +1,8 @@
-import { Inject, Injectable, RequestTimeoutException } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { SessionRepositoryPort } from '../../ports';
 import { LobbySettings } from '../../domain';
-import { PrismaService } from '../../../prisma/prisma.service';
 import { ParticipantDto } from '../dtos/participant.dto';
 import { PlayerType } from '../../../generated/prisma-client/client';
-import * as crypto from 'crypto';
 import { PlayerColor, Session } from '@prisma/client';
 
 @Injectable()
@@ -54,25 +52,6 @@ export class CreateSessionUseCase {
       new Date(),
     );
     await this.sessionRepo.createParticipant(participant);
-    const inviteToken = await this.generateUniqueCode();
-    await this.sessionRepo.addInviteToken((await session).id, inviteToken);
-    return { ...(await session), inviteToken };
-  }
-
-  async generateUniqueCode(maxAttempts = 10): Promise<string> {
-    for (let i = 0; i < maxAttempts; i++) {
-      const code = this.generateCode();
-
-      if (!(await this.sessionRepo.findByInviteToken(code))) return code;
-    }
-    throw new RequestTimeoutException(
-      'Failed to generate unique code after maximum attempts',
-    );
-  }
-
-  private generateCode(): string {
-    const randomBytes = crypto.randomBytes(4);
-    const randomNumber = randomBytes.readUInt32BE(0);
-    return ((randomNumber % 90000000) + 10000000).toString();
+    return { ...(await session) };
   }
 }
