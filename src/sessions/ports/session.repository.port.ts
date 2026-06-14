@@ -28,6 +28,8 @@ export abstract class SessionRepositoryPort {
       consecutiveSixes: number;
     },
   ): Promise<void>;
+  abstract addInviteToken(sessionId: string, inviteToken: string);
+  abstract findByInviteToken(inviteToken: string): Promise<Session | null>;
 
   abstract passTurn(sessionId: string, currentPlayerId: string): Promise<void>;
   abstract updateSessionById(

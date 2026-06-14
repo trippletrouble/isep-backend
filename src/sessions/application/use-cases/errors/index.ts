@@ -8,3 +8,6 @@ export * from './invalid-session-status.error';
 export * from './dice-already-rolled.error';
 export * from './not-your-turn.error';
 export * from './session-not-found.error';
+export * from './lobby-full.error';
+export * from './color-already-taken.error';
+export * from './invalid-invite-token.error';
