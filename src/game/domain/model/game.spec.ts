@@ -25,7 +25,9 @@ describe('Game Domain Model', () => {
     const now = new Date();
     const game = new Game('123', 'IN_PROGRESS', now, now);
 
-    expect(() => game.start()).toThrow('Cannot start game in status "IN_PROGRESS"');
+    expect(() => game.start()).toThrow(
+      'Cannot start game in status "IN_PROGRESS"',
+    );
   });
 
   it('should transition status to FINISHED when finishing', () => {
@@ -42,6 +44,8 @@ describe('Game Domain Model', () => {
     const now = new Date();
     const game = new Game('123', 'WAITING', now, now);
 
-    expect(() => game.finish()).toThrow('Cannot finish game in status "WAITING"');
+    expect(() => game.finish()).toThrow(
+      'Cannot finish game in status "WAITING"',
+    );
   });
 });

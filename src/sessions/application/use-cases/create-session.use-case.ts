@@ -1,17 +1,15 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { SessionRepositoryPort } from '../../ports';
 import { LobbySettings } from '../../domain';
-import { PrismaService } from '../../../prisma/prisma.service';
-import { PlayerColor, Session } from '../../../generated/prisma-client/client';
 import { ParticipantDto } from '../dtos/participant.dto';
 import { PlayerType } from '../../../generated/prisma-client/client';
+import { PlayerColor, Session } from '@prisma/client';
 
 @Injectable()
 export class CreateSessionUseCase {
   constructor(
     @Inject(SessionRepositoryPort)
     private readonly sessionRepo: SessionRepositoryPort,
-    private readonly prisma: PrismaService,
   ) {}
   /**
    * Creates a session, takes hostId and LobbySettings
@@ -54,6 +52,6 @@ export class CreateSessionUseCase {
       new Date(),
     );
     await this.sessionRepo.createParticipant(participant);
-    return session;
+    return { ...(await session) };
   }
 }

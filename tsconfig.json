@@ -13,6 +13,9 @@
     "sourceMap": true,
     "outDir": "./dist",
     "baseUrl": "./",
+    "paths": {
+      "..prisma-clientenums": ["src/generated/prisma-client/enums"]
+    },
     "incremental": true,
     "skipLibCheck": true,
     "strictNullChecks": true,
