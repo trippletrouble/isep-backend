@@ -5,9 +5,16 @@ import { PrismaSessionRepository } from './adapters';
 import { SessionsController } from './adapters';
 import {
   CreateSessionUseCase,
+  LeaveSessionUseCase,
   ListOpenSessionsUseCase,
+  ReconnectUseCase,
   UpdateLobbySettingsUseCase,
   GetHistoryUseCase,
+  GetResultsUseCase,
+  DeleteSessionUseCase,
+  GetSessionPlayersUseCase,
+  JoinSessionUseCase,
+  GenerateInviteUseCase,
 } from './application';
 import { AuthModule } from '../auth/auth.module';
 import { GetGameStateUseCase } from './application/use-cases/get-game-state.use-case';
@@ -41,6 +48,8 @@ export class AppModule {}
     GetGameStateUseCase,
     StartSessionUseCase,
     ListOpenSessionsUseCase,
+    LeaveSessionUseCase,
+    ReconnectUseCase,
     GetGameStateUseCase,
     RollDiceUseCase,
     GetPossibleMovesUseCase,
@@ -49,6 +58,11 @@ export class AppModule {}
     MoveFigureUseCase,
     HttpDiceClientAdapter,
     UpdateLobbySettingsUseCase,
+    JoinSessionUseCase,
+    GenerateInviteUseCase,
+    GetSessionPlayersUseCase,
+    DeleteSessionUseCase,
+    GetResultsUseCase,
     GetHistoryUseCase,
     {
       provide: SessionRepositoryPort,
@@ -65,10 +79,17 @@ export class AppModule {}
     CreateSessionUseCase,
     ListOpenSessionsUseCase,
     RollDiceUseCase,
+    LeaveSessionUseCase,
+    ReconnectUseCase,
     MoveFigureUseCase,
     GetPossibleMovesUseCase,
     GetLobbyUseCase,
     UpdateLobbySettingsUseCase,
+    JoinSessionUseCase,
+    GenerateInviteUseCase,
+    GetSessionPlayersUseCase,
+    DeleteSessionUseCase,
+    GetResultsUseCase,
   ],
 })
 export class SessionModule {}

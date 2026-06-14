@@ -4,4 +4,7 @@ export * from './move-figure-request.dto';
 export * from './list-sessions.request.dto';
 export * from './list-sessions.response.dto';
 export * from './game-history-event.dto';
-
+export * from './player-response.dto';
+export * from './join-session.request.dto';
+export * from './invite-response.dto';
+export * from './game-result.dto';
