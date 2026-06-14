@@ -8,3 +8,4 @@ export * from './reconnect.use-case';
 export * from './get-lobby.use-case';
 export * from './update-lobby-settings.use-case';
 export * from './join-session.use-case';
+export * from './generate-invite.use-case';

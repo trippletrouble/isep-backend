@@ -7,6 +7,7 @@ import {
   LobbyFullError,
   ColorAlreadyTakenError,
   InvalidInviteTokenError,
+  InviteTokenExpiredError,
 } from './errors';
 import { GameStateType } from './types/game-state.type';
 import {
@@ -199,5 +200,45 @@ describe('JoinSessionUseCase', () => {
 
     const dto = repo.createParticipant.mock.calls[0][0];
     expect(dto.color).toBe(PlayerColor.GREEN);
+  });
+
+  it('throws InviteTokenExpiredError when joining a private session with an expired token', async () => {
+    const expiredDate = new Date();
+    expiredDate.setHours(expiredDate.getHours() - 1);
+    repo.findSessionById.mockResolvedValue(
+      makeSession({
+        isPrivate: true,
+        inviteToken: ***ENTFERNT***
+        inviteTokenExpiresAt: ***ENTFERNT***
+      }),
+    );
+
+    await expect(
+      useCase.execute('session-1', 'user-1', undefined, 'expired-token'),
+    ).rejects.toBeInstanceOf(InviteTokenExpiredError);
+  });
+
+  it('joins a private session successfully if token matches and is not expired', async () => {
+    const futureDate = new Date();
+    futureDate.setHours(futureDate.getHours() + 1);
+    repo.findSessionById.mockResolvedValue(
+      makeSession({
+        isPrivate: true,
+        inviteToken: ***ENTFERNT***
+        inviteTokenExpiresAt: ***ENTFERNT***
+      }),
+    );
+    repo.findGameStateById.mockResolvedValue(makeGameState());
+    repo.createParticipant.mockResolvedValue({} as any);
+
+    const result = await useCase.execute(
+      'session-1',
+      'user-1',
+      undefined,
+      'valid-token',
+    );
+
+    expect(repo.createParticipant).toHaveBeenCalledTimes(1);
+    expect(result).toBeDefined();
   });
 });

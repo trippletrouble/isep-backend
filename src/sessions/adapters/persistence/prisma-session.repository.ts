@@ -157,6 +157,20 @@ export class PrismaSessionRepository implements SessionRepositoryPort {
     });
   }
 
+  async updateSessionInvite(
+    sessionId: string,
+    inviteToken: ***ENTFERNT*** | null,
+    inviteTokenExpiresAt: ***ENTFERNT*** | null,
+  ): Promise<void> {
+    await this.prisma.session.update({
+      where: { id: sessionId },
+      data: {
+        inviteToken,
+        inviteTokenExpiresAt,
+      },
+    });
+  }
+
   findByInviteToken(inviteToken: string): Promise<Session | null> {
     return this.prisma.session.findUnique({
       where: { inviteToken: inviteToken },
