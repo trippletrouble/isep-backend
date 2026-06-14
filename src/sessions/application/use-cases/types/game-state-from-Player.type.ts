@@ -8,4 +8,4 @@ export type GameStateFromPlayerType = {
   isCurrentTurn: boolean;
   hasFinished: boolean;
   figuresInGoal: number;
-}
+};
