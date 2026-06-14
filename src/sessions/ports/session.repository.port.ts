@@ -51,4 +51,5 @@ export abstract class SessionRepositoryPort {
   abstract removeParticipant(sessionId: string, userId: string): Promise<void>;
   abstract deleteSession(sessionId: string): Promise<void>;
   abstract applyMove(data: ApplyMoveData): Promise<void>;
+  abstract deleteSessionById(id: string): Promise<void>;
 }

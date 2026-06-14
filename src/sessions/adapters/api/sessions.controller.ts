@@ -21,6 +21,7 @@ import {
   CreateSessionUseCase,
   ListOpenSessionsUseCase,
   ListSessionsRequestDto,
+  DeleteSessionUseCase,
   LeaveSessionUseCase,
   ReconnectUseCase,
   JoinSessionRequestDto,
@@ -83,6 +84,7 @@ export class SessionsController {
     private readonly getPossibleMovesUseCase: GetPossibleMovesUseCase,
     private readonly getLobbyUseCase: GetLobbyUseCase,
     private readonly updateLobbySettingsUseCase: UpdateLobbySettingsUseCase,
+    private readonly deleteSessionUseCase: DeleteSessionUseCase,
     private readonly getSessionPlayersUseCase: GetSessionPlayersUseCase,
     private readonly joinSessionUseCase: JoinSessionUseCase,
     private readonly generateInviteUseCase: GenerateInviteUseCase,
@@ -540,6 +542,38 @@ export class SessionsController {
       if (error instanceof ParticipantNotFoundError) {
         throw new NotFoundException({
           code: 'PARTICIPANT_NOT_FOUND',
+          message: error.message,
+        });
+      }
+      throw error;
+    }
+  }
+
+  @Delete(':id')
+  @HttpCode(204)
+  @UseGuards(SessionGuard)
+  async deleteSession(
+    @Param('id') sessionId: string,
+    @CurrentUser() user: User,
+  ): Promise<void> {
+    try {
+      await this.deleteSessionUseCase.execute(sessionId, user.id);
+    } catch (error) {
+      if (error instanceof SessionNotFoundError) {
+        throw new NotFoundException({
+          code: 'SESSION_NOT_FOUND',
+          message: error.message,
+        });
+      }
+      if (error instanceof NotHostError) {
+        throw new ForbiddenException({
+          code: 'NOT_HOST',
+          message: error.message,
+        });
+      }
+      if (error instanceof InvalidSessionStatusError) {
+        throw new ConflictException({
+          code: 'INVALID_SESSION_STATUS',
           message: error.message,
         });
       }
