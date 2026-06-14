@@ -91,9 +91,6 @@
       "**/*.(t|j)s"
     ],
     "coverageDirectory": "../coverage",
-    "testEnvironment": "node",
-    "moduleNameMapper": {
-      "^\\.\\.prisma-clientenums$": "<rootDir>/generated/prisma-client/enums"
-    }
+    "testEnvironment": "node"
   }
 }

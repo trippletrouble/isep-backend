@@ -30,6 +30,8 @@ import {
   InviteResponseDto,
   GetSessionPlayersUseCase,
   PlayerResponseDto,
+  GetResultsUseCase,
+  GameResultDto,
 } from '../../application';
 import { CreateSessionRequestDto } from '../../application';
 import { SessionGuard } from '../../../auth/guards/session.guard';
@@ -88,6 +90,7 @@ export class SessionsController {
     private readonly getSessionPlayersUseCase: GetSessionPlayersUseCase,
     private readonly joinSessionUseCase: JoinSessionUseCase,
     private readonly generateInviteUseCase: GenerateInviteUseCase,
+    private readonly getResultsUseCase: GetResultsUseCase,
   ) {}
 
   @Get(':id')
@@ -132,6 +135,28 @@ export class SessionsController {
   async getLobby(@Param('id') sessionId: string): Promise<LobbyDto> {
     try {
       return await this.getLobbyUseCase.execute(sessionId);
+    } catch (error) {
+      if (error instanceof SessionNotFoundError) {
+        throw new NotFoundException({
+          code: 'SESSION_NOT_FOUND',
+          message: error.message,
+        });
+      }
+      if (error instanceof InvalidSessionStatusError) {
+        throw new ConflictException({
+          code: 'INVALID_SESSION_STATUS',
+          message: error.message,
+        });
+      }
+      throw error;
+    }
+  }
+
+  @Get(':id/results')
+  @UseGuards(SessionGuard)
+  async getResults(@Param('id') sessionId: string): Promise<GameResultDto[]> {
+    try {
+      return await this.getResultsUseCase.execute(sessionId);
     } catch (error) {
       if (error instanceof SessionNotFoundError) {
         throw new NotFoundException({

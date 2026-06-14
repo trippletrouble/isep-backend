@@ -7,6 +7,7 @@ export * from './leave-session.use-case';
 export * from './reconnect.use-case';
 export * from './get-lobby.use-case';
 export * from './update-lobby-settings.use-case';
+export * from './get-results.use-case';
 export * from './delete-session.use-case';
 export * from './get-session-players.use-case';
 export * from './join-session.use-case';

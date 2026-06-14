@@ -6,3 +6,4 @@ export * from './list-sessions.response.dto';
 export * from './player-response.dto';
 export * from './join-session.request.dto';
 export * from './invite-response.dto';
+export * from './game-result.dto';
