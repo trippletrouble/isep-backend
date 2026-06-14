@@ -95,7 +95,7 @@ export class PrismaSessionRepository implements SessionRepositoryPort {
   async createParticipant(
     participant: GameParticipant,
   ): Promise<GameParticipant | null> {
-    return await this.prisma.gameParticipant.create({
+    return this.prisma.gameParticipant.create({
       data: {
         sessionId: participant.sessionId,
         userId: participant.userId,
@@ -178,33 +178,30 @@ export class PrismaSessionRepository implements SessionRepositoryPort {
   }
 
   async passTurn(sessionId: string, currentPlayerId: string): Promise<void> {
-    const sessionWithParticipants = await this.prisma.session.findUnique({
-      where: { id: sessionId },
-      include: {
-        participants: {
-          orderBy: {
-            joinedAt: 'asc',
+    await this.prisma.$transaction(async (tx) => {
+      const sessionWithParticipants = await tx.session.findUnique({
+        where: { id: sessionId },
+        include: {
+          participants: {
+            orderBy: {
+              joinedAt: 'asc',
+            },
           },
         },
-      },
-    });
+      });
 
-    if (!sessionWithParticipants) throw new Error('Session not found');
+      if (!sessionWithParticipants) throw new Error('Session not found');
+      const currentPlayerIndex = sessionWithParticipants.participants.findIndex(
+        (p) => p.userId === currentPlayerId,
+      );
 
-    const currentPlayerIndex = sessionWithParticipants.participants.findIndex(
-      (participant) => participant.userId === currentPlayerId,
-    );
+      if (currentPlayerIndex === -1)
+        throw new Error('Current player not found in session');
+      const participants = sessionWithParticipants.participants;
+      const nextPlayer =
+        participants[(currentPlayerIndex + 1) % participants.length];
 
-    if (currentPlayerIndex === -1) {
-      throw new Error('Current player not found in session');
-    }
-
-    const participants = sessionWithParticipants.participants;
-    const nextPlayer =
-      participants[(currentPlayerIndex + 1) % participants.length];
-
-    await this.prisma.$transaction([
-      this.prisma.session.update({
+      await tx.session.update({
         where: { id: sessionId },
         data: {
           currentPlayerId: nextPlayer.userId,
@@ -214,8 +211,9 @@ export class PrismaSessionRepository implements SessionRepositoryPort {
           consecutiveSixes: 0,
           updatedAt: new Date(),
         },
-      }),
-      this.prisma.gameParticipant.update({
+      });
+
+      await tx.gameParticipant.update({
         where: {
           sessionId_userId: {
             sessionId: sessionId,
@@ -223,8 +221,9 @@ export class PrismaSessionRepository implements SessionRepositoryPort {
           },
         },
         data: { isCurrentTurn: false, updatedAt: new Date() },
-      }),
-      this.prisma.gameParticipant.update({
+      });
+
+      await tx.gameParticipant.update({
         where: {
           sessionId_userId: {
             sessionId: sessionId,
@@ -232,8 +231,8 @@ export class PrismaSessionRepository implements SessionRepositoryPort {
           },
         },
         data: { isCurrentTurn: true, updatedAt: new Date() },
-      }),
-    ]);
+      });
+    });
   }
 
   async applyMove(data: ApplyMoveData): Promise<void> {
@@ -501,10 +500,29 @@ export class PrismaSessionRepository implements SessionRepositoryPort {
       updatePayload.turnNumber = updateData.turnNumber;
     if (updateData.lastDiceValue !== undefined)
       updatePayload.lastDiceValue = updateData.lastDiceValue;
+    if (updateData.hostId !== undefined)
+      updatePayload.host = { connect: { id: updateData.hostId } };
 
     return this.prisma.session.update({
       where: { id },
       data: updatePayload,
+    });
+  }
+
+  async removeParticipant(sessionId: string, userId: string): Promise<void> {
+    await this.prisma.gameParticipant.delete({
+      where: {
+        sessionId_userId: {
+          sessionId,
+          userId,
+        },
+      },
+    });
+  }
+
+  async deleteSession(sessionId: string): Promise<void> {
+    await this.prisma.session.delete({
+      where: { id: sessionId },
     });
   }
 }
