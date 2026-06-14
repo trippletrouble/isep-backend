@@ -64,6 +64,7 @@ import {
 } from '../../application/use-cases/errors';
 import { MoveFigureResultType } from '../../application/use-cases/types/move-figure-result.type';
 import { AuthService } from '../../../auth/application/auth.service';
+import { ApiQuery } from '@nestjs/swagger';
 
 @Controller('sessions')
 export class SessionsController {
@@ -313,17 +314,24 @@ export class SessionsController {
   @Post(':id/join')
   @HttpCode(200)
   @UseGuards(SessionGuard)
+  @ApiQuery({
+    name: 'inviteToken',
+    required: false,
+    type: 'string',
+  })
   async joinSession(
     @Param('id') sessionId: string,
     @Body() body: JoinSessionRequestDto,
+    @Query() queryInviteToken: string,
     @CurrentUser() user: User,
   ): Promise<GameStateType> {
     try {
+      const inviteToken = queryInviteToken || body.inviteToken;
       return await this.joinSessionUseCase.execute(
         sessionId,
         user.id,
         body.color,
-        body.inviteToken,
+        inviteToken,
       );
     } catch (error) {
       if (error instanceof SessionNotFoundError) {
