@@ -5,7 +5,9 @@ import { PrismaSessionRepository } from './adapters';
 import { SessionsController } from './adapters';
 import {
   CreateSessionUseCase,
+  LeaveSessionUseCase,
   ListOpenSessionsUseCase,
+  ReconnectUseCase,
   UpdateLobbySettingsUseCase,
   JoinSessionUseCase,
 } from './application';
@@ -41,6 +43,8 @@ export class AppModule {}
     GetGameStateUseCase,
     StartSessionUseCase,
     ListOpenSessionsUseCase,
+    LeaveSessionUseCase,
+    ReconnectUseCase,
     GetGameStateUseCase,
     RollDiceUseCase,
     GetPossibleMovesUseCase,
@@ -65,6 +69,8 @@ export class AppModule {}
     CreateSessionUseCase,
     ListOpenSessionsUseCase,
     RollDiceUseCase,
+    LeaveSessionUseCase,
+    ReconnectUseCase,
     MoveFigureUseCase,
     GetPossibleMovesUseCase,
     GetLobbyUseCase,

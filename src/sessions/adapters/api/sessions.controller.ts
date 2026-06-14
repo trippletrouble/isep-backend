@@ -13,6 +13,7 @@ import {
   ForbiddenException,
   ConflictException,
   NotFoundException,
+  Delete,
 } from '@nestjs/common';
 import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
 
@@ -20,6 +21,8 @@ import {
   CreateSessionUseCase,
   ListOpenSessionsUseCase,
   ListSessionsRequestDto,
+  LeaveSessionUseCase,
+  ReconnectUseCase,
   JoinSessionRequestDto,
   JoinSessionUseCase,
 } from '../../application';
@@ -53,8 +56,10 @@ import {
   LobbyFullError,
   ColorAlreadyTakenError,
   InvalidInviteTokenError,
+  ParticipantNotFoundError,
 } from '../../application/use-cases/errors';
 import { MoveFigureResultType } from '../../application/use-cases/types/move-figure-result.type';
+import { AuthService } from '../../../auth/application/auth.service';
 
 @Controller('sessions')
 export class SessionsController {
@@ -62,6 +67,9 @@ export class SessionsController {
     private readonly createSessionUseCase: CreateSessionUseCase,
     private readonly listOpenSessionsUseCase: ListOpenSessionsUseCase,
     private readonly getGameStateUseCase: GetGameStateUseCase,
+    private readonly leaveSessionUseCase: LeaveSessionUseCase,
+    private readonly reconnectUseCase: ReconnectUseCase,
+    private readonly authService: AuthService,
     private readonly rollDiceUseCase: RollDiceUseCase,
     private readonly moveFigureUseCase: MoveFigureUseCase,
     private readonly startSessionUseCase: StartSessionUseCase,
@@ -408,6 +416,59 @@ export class SessionsController {
           },
           404,
         );
+      }
+      throw error;
+    }
+  }
+
+  @Delete(':id/leave')
+  @HttpCode(200)
+  @UseGuards(SessionGuard)
+  async leaveSession(
+    @Param('id') sessionId: string,
+    @CurrentUser() user: User,
+  ) {
+    try {
+      await this.leaveSessionUseCase.execute(sessionId, user.id);
+      return { message: 'Successfully left session' };
+    } catch (error) {
+      if (error instanceof SessionNotFoundError) {
+        throw new NotFoundException({
+          code: 'SESSION_NOT_FOUND',
+          message: error.message,
+        });
+      }
+      if (error instanceof ParticipantNotFoundError) {
+        throw new NotFoundException({
+          code: 'PARTICIPANT_NOT_FOUND',
+          message: error.message,
+        });
+      }
+      throw error;
+    }
+  }
+
+  @Post(':id/reconnect')
+  @HttpCode(200)
+  @UseGuards(SessionGuard)
+  async reconnectSession(
+    @Param('id') sessionId: string,
+    @CurrentUser() user: User,
+  ) {
+    try {
+      return await this.reconnectUseCase.execute(sessionId, user.id);
+    } catch (error) {
+      if (error instanceof SessionNotFoundError) {
+        throw new NotFoundException({
+          code: 'SESSION_NOT_FOUND',
+          message: error.message,
+        });
+      }
+      if (error instanceof ParticipantNotFoundError) {
+        throw new NotFoundException({
+          code: 'PARTICIPANT_NOT_FOUND',
+          message: error.message,
+        });
       }
       throw error;
     }
