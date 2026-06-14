@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
-import { AppModule } from './../src/app.module';
+import { AppModule } from '../src/app.module';
 
 describe('GameController (e2e)', () => {
   let app: INestApplication<App>;
@@ -21,9 +21,7 @@ describe('GameController (e2e)', () => {
   });
 
   it('/games (POST) - should create a game', async () => {
-    const res = await request(app.getHttpServer())
-      .post('/games')
-      .expect(201);
+    const res = await request(app.getHttpServer()).post('/games').expect(201);
 
     expect(res.body).toHaveProperty('id');
     expect(res.body.status).toBe('WAITING');

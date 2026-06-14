@@ -23,6 +23,8 @@ import {
   ListSessionsRequestDto,
   LeaveSessionUseCase,
   ReconnectUseCase,
+  JoinSessionRequestDto,
+  JoinSessionUseCase,
 } from '../../application';
 import { CreateSessionRequestDto } from '../../application';
 import { SessionGuard } from '../../../auth/guards/session.guard';
@@ -51,9 +53,13 @@ import {
   SessionNotFoundError,
   InvalidMoveError,
   NotYourTurnError,
+  LobbyFullError,
+  ColorAlreadyTakenError,
+  InvalidInviteTokenError,
   ParticipantNotFoundError,
 } from '../../application/use-cases/errors';
 import { MoveFigureResultType } from '../../application/use-cases/types/move-figure-result.type';
+import { AuthService } from '../../../auth/application/auth.service';
 
 @Controller('sessions')
 export class SessionsController {
@@ -70,6 +76,7 @@ export class SessionsController {
     private readonly getPossibleMovesUseCase: GetPossibleMovesUseCase,
     private readonly getLobbyUseCase: GetLobbyUseCase,
     private readonly updateLobbySettingsUseCase: UpdateLobbySettingsUseCase,
+    private readonly joinSessionUseCase: JoinSessionUseCase,
   ) {}
 
   @Get(':id')
@@ -297,6 +304,55 @@ export class SessionsController {
   @Get()
   async listOpenSessions(@Query() query: ListSessionsRequestDto) {
     return this.listOpenSessionsUseCase.execute(query.page, query.size);
+  }
+  @Post(':id/join')
+  @HttpCode(200)
+  @UseGuards(SessionGuard)
+  async joinSession(
+    @Param('id') sessionId: string,
+    @Body() body: JoinSessionRequestDto,
+    @CurrentUser() user: User,
+  ): Promise<GameStateType> {
+    try {
+      return await this.joinSessionUseCase.execute(
+        sessionId,
+        user.id,
+        body.color,
+        body.inviteToken,
+      );
+    } catch (error) {
+      if (error instanceof SessionNotFoundError) {
+        throw new NotFoundException({
+          code: 'SESSION_NOT_FOUND',
+          message: error.message,
+        });
+      }
+      if (error instanceof InvalidSessionStatusError) {
+        throw new ConflictException({
+          code: 'INVALID_SESSION_STATUS',
+          message: error.message,
+        });
+      }
+      if (error instanceof LobbyFullError) {
+        throw new ConflictException({
+          code: 'LOBBY_FULL',
+          message: error.message,
+        });
+      }
+      if (error instanceof ColorAlreadyTakenError) {
+        throw new ConflictException({
+          code: 'COLOR_ALREADY_TAKEN',
+          message: error.message,
+        });
+      }
+      if (error instanceof InvalidInviteTokenError) {
+        throw new ForbiddenException({
+          code: 'INVALID_INVITE_TOKEN',
+          message: error.message,
+        });
+      }
+      throw error;
+    }
   }
   @Post(':id/start')
   @HttpCode(200)
