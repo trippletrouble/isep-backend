@@ -9,6 +9,7 @@ import {
   ListOpenSessionsUseCase,
   ReconnectUseCase,
   UpdateLobbySettingsUseCase,
+  GetHistoryUseCase,
   GetResultsUseCase,
   DeleteSessionUseCase,
   GetSessionPlayersUseCase,
@@ -62,6 +63,7 @@ export class AppModule {}
     GetSessionPlayersUseCase,
     DeleteSessionUseCase,
     GetResultsUseCase,
+    GetHistoryUseCase,
     {
       provide: SessionRepositoryPort,
       useClass: PrismaSessionRepository,

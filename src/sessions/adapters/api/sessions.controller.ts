@@ -49,6 +49,8 @@ import { GetPossibleMovesUseCase } from '../../application';
 import { GetLobbyUseCase } from '../../application';
 import { UpdateLobbySettingsUseCase } from '../../application';
 import { LobbyDto } from '../../application';
+import { GetHistoryUseCase, GameHistoryEventDto } from '../../application';
+
 import { LobbySettingsDto } from '../../application/dtos/lobby-settings.dto';
 import { PossibleMovesResultType } from '../../application/use-cases/types/possible-moves-result.type';
 import {
@@ -91,6 +93,7 @@ export class SessionsController {
     private readonly joinSessionUseCase: JoinSessionUseCase,
     private readonly generateInviteUseCase: GenerateInviteUseCase,
     private readonly getResultsUseCase: GetResultsUseCase,
+    private readonly getHistoryUseCase: GetHistoryUseCase,
   ) {}
 
   @Get(':id')
@@ -145,6 +148,24 @@ export class SessionsController {
       if (error instanceof InvalidSessionStatusError) {
         throw new ConflictException({
           code: 'INVALID_SESSION_STATUS',
+          message: error.message,
+        });
+      }
+      throw error;
+    }
+  }
+
+  @Get(':id/history')
+  @UseGuards(SessionGuard)
+  async getHistory(
+    @Param('id') sessionId: string,
+  ): Promise<GameHistoryEventDto[]> {
+    try {
+      return await this.getHistoryUseCase.execute(sessionId);
+    } catch (error) {
+      if (error instanceof SessionNotFoundError) {
+        throw new NotFoundException({
+          code: 'SESSION_NOT_FOUND',
           message: error.message,
         });
       }
