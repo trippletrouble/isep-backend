@@ -53,6 +53,7 @@ model Session {
   numberOfPlayers      Int              @default(4) @map("number_of_players")
   isPrivate            Boolean          @default(false) @map("is_private")
   inviteToken          String?          @unique @map("invite_token")
+  inviteTokenExpiresAt DateTime?        @map("invite_token_expires_at")
   turnTimeLimitSeconds Int?             @map("turn_time_limit_seconds")
   additionalRules      AdditionalRule[] @map("additional_rules")
   hostId               String           @map("host_id") @db.Uuid
