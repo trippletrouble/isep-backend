@@ -103,7 +103,7 @@ export class SessionsController {
     @CurrentUser() user: User,
   ): Promise<GameStateType> {
     try {
-      return this.getGameStateUseCase.execute(user, sessionId);
+      return await this.getGameStateUseCase.execute(user, sessionId);
     } catch (error) {
       if (error instanceof SessionNotFoundError) {
         throw new NotFoundException({
@@ -391,7 +391,7 @@ export class SessionsController {
   async joinSession(
     @Param('id') sessionId: string,
     @Body() body: JoinSessionRequestDto,
-    @Query() queryInviteToken: string,
+    @Query('inviteToken') queryInviteToken?: string,
     @CurrentUser() user: User,
   ): Promise<GameStateType> {
     try {
