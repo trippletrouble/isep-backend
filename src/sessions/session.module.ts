@@ -28,8 +28,8 @@ import { HttpDiceClientAdapter } from './adapters/dice/http-dice-client.adapter'
 import { StartSessionUseCase } from './application';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { GameStateCacheService } from './application/services/game-state-cache.service';
 
-export class AppModule {}
 @Module({
   imports: [
     PrismaModule,
@@ -50,7 +50,6 @@ export class AppModule {}
     ListOpenSessionsUseCase,
     LeaveSessionUseCase,
     ReconnectUseCase,
-    GetGameStateUseCase,
     RollDiceUseCase,
     GetPossibleMovesUseCase,
     GetLobbyUseCase,
@@ -64,6 +63,7 @@ export class AppModule {}
     DeleteSessionUseCase,
     GetResultsUseCase,
     GetHistoryUseCase,
+    GameStateCacheService,
     {
       provide: SessionRepositoryPort,
       useClass: PrismaSessionRepository,
@@ -90,6 +90,7 @@ export class AppModule {}
     GetSessionPlayersUseCase,
     DeleteSessionUseCase,
     GetResultsUseCase,
+    GameStateCacheService,
   ],
 })
 export class SessionModule {}

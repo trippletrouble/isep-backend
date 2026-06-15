@@ -1,5 +1,6 @@
 import { JoinSessionUseCase } from './join-session.use-case';
 import { SessionRepositoryPort } from '../../ports';
+import { GameStateCacheService } from '../services/game-state-cache.service';
 import { SessionWithParticipants } from './types';
 import {
   SessionNotFoundError,
@@ -48,6 +49,7 @@ const makeGameState = (sessionId = 'session-1'): GameStateType => ({
 describe('JoinSessionUseCase', () => {
   let useCase: JoinSessionUseCase;
   let repo: jest.Mocked<SessionRepositoryPort>;
+  let mockCache: jest.Mocked<GameStateCacheService>;
 
   beforeEach(() => {
     repo = {
@@ -56,7 +58,11 @@ describe('JoinSessionUseCase', () => {
       createParticipant: jest.fn(),
     } as unknown as jest.Mocked<SessionRepositoryPort>;
 
-    useCase = new JoinSessionUseCase(repo);
+    mockCache = {
+      set: jest.fn().mockResolvedValue(undefined),
+    } as any;
+
+    useCase = new JoinSessionUseCase(repo, mockCache);
   });
 
   it('joins a public session without preferred color and auto-assigns RED', async () => {
@@ -72,6 +78,7 @@ describe('JoinSessionUseCase', () => {
     expect(dto.color).toBe(PlayerColor.RED);
     expect(dto.userId).toBe('user-1');
     expect(result).toBe(gameState);
+    expect(mockCache.set).toHaveBeenCalledWith('session-1', gameState);
   });
 
   it('joins a public session with a preferred color', async () => {

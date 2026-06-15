@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { SessionRepositoryPort } from 'src/sessions/ports';
 import { DiceClientPort } from 'src/sessions/ports/dice-client.port';
+import { GameStateCacheService } from '../services/game-state-cache.service';
 import { PossibleMoveCalculatorUseCase } from './possible-move-calculator.use-case';
 import {
   DiceAlreadyRolledError,
@@ -17,6 +18,7 @@ export class RollDiceUseCase {
     @Inject(DiceClientPort)
     private readonly diceClient: DiceClientPort,
     private readonly possibleMoveCalculator: PossibleMoveCalculatorUseCase,
+    private readonly cache: GameStateCacheService,
   ) {}
 
   async execute(
@@ -68,6 +70,8 @@ export class RollDiceUseCase {
     if (!updatedGameState) {
       throw new SessionNotFoundError();
     }
+
+    this.cache.set(sessionId, updatedGameState).catch(() => {});
 
     return {
       value,

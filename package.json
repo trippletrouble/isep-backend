@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@jannis6023/prisma-class-generator": "^7.0.2",
+    "@nestjs-modules/ioredis": "^2.2.1",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.0.1",
@@ -35,6 +36,7 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "cookie-parser": "^1.4.7",
+    "ioredis": "^5.11.1",
     "openid-client": "^6.8.4",
     "passport": "^0.7.0",
     "passport-oauth2": "^1.8.0",
@@ -91,9 +93,6 @@
       "**/*.(t|j)s"
     ],
     "coverageDirectory": "../coverage",
-    "testEnvironment": "node",
-    "moduleNameMapper": {
-      "^src/(.*)$": "<rootDir>/$1"
-    }
+    "testEnvironment": "node"
   }
 }
