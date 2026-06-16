@@ -62,7 +62,7 @@ describe('GenerateInviteUseCase', () => {
     expect(diffHours).toBeCloseTo(24, 0.1);
 
     expect(result.inviteToken).toBe(calledToken);
-    expect(result.inviteUrl).toBe(`https://ludo.com/sessions/session-1/join?token=${calledToken}`);
+    expect(result.inviteUrl).toBe('https://ludo.com/sessions/session-1/join?token=' + calledToken);
     expect(result.expiresAt).toBe(calledExpiresAt);
   });
 

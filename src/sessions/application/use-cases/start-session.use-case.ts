@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { PieceStatus } from 'src/generated/prisma-client/client';
 import { SessionRepositoryPort } from '../../ports';
 import { PrismaService } from '../../../prisma/prisma.service';
@@ -11,6 +11,7 @@ import {
   SessionNotFoundError,
 } from './errors';
 import { GameParticipant } from '../../../generated/prisma-class/game_participant';
+import { SessionEventsService } from '../services';
 
 export {
   InvalidSessionStatusError,
@@ -33,6 +34,8 @@ export class StartSessionUseCase {
     @Inject(SessionRepositoryPort)
     private readonly sessionRepo: SessionRepositoryPort,
     private readonly prisma: PrismaService,
+    @Optional()
+    private readonly sessionEvents?: SessionEventsService,
   ) {}
 
   async execute(sessionId: string, user: User): Promise<StartSessionInfoType> {
@@ -97,7 +100,7 @@ export class StartSessionUseCase {
         });
       }
     });
-    return {
+    const result = {
       sessionId,
       status: 'IN_PROGRESS',
       currentPlayerId: firstPlayerId,
@@ -110,5 +113,12 @@ export class StartSessionUseCase {
         status: f.status,
       })),
     };
+
+    const gameState = await this.sessionRepo.findGameStateById(sessionId);
+    if (gameState) {
+      this.sessionEvents?.emit(sessionId, 'game_started', gameState);
+    }
+
+    return result;
   }
 }
