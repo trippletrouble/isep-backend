@@ -37,7 +37,7 @@ export class GenerateInviteUseCase {
 
     const baseUrl =
       this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3000';
-    const inviteUrl = baseUrl + '/join?token=' + token;
+    const inviteUrl = baseUrl + '/sessions/' + sessionId + '/join?token=' + token;
 
     return new InviteResponseDto(token, inviteUrl, expiresAt);
   }
