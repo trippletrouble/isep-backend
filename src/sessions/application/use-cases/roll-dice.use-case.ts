@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { SessionRepositoryPort } from 'src/sessions/ports';
 import { DiceClientPort } from 'src/sessions/ports/dice-client.port';
 import { GameStateCacheService } from '../services/game-state-cache.service';
@@ -10,6 +10,8 @@ import {
   SessionNotFoundError,
 } from './errors';
 import { DiceRollResultType } from './types/dice-roll-result.type';
+import { SessionEventsService } from '../services';
+
 @Injectable()
 export class RollDiceUseCase {
   constructor(
@@ -19,6 +21,8 @@ export class RollDiceUseCase {
     private readonly diceClient: DiceClientPort,
     private readonly possibleMoveCalculator: PossibleMoveCalculatorUseCase,
     private readonly cache: GameStateCacheService,
+    @Optional()
+    private readonly sessionEvents?: SessionEventsService,
   ) {}
 
   async execute(
@@ -72,6 +76,22 @@ export class RollDiceUseCase {
     }
 
     this.cache.set(sessionId, updatedGameState).catch(() => {});
+
+    this.sessionEvents?.emit(sessionId, 'dice_rolled', {
+      value,
+      playerId,
+      hasMoves,
+      rollAgain,
+      consecutiveSixes,
+      turnForfeit,
+    });
+
+    if (!hasMoves || turnForfeit) {
+      this.sessionEvents?.emit(sessionId, 'turn_changed', {
+        currentPlayerId: updatedGameState.currentPlayerId,
+        turnNumber: updatedGameState.turnNumber,
+      });
+    }
 
     return {
       value,
