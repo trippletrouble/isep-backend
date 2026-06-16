@@ -62,7 +62,7 @@ describe('GenerateInviteUseCase', () => {
     expect(diffHours).toBeCloseTo(24, 0.1);
 
     expect(result.inviteToken).toBe(calledToken);
-    expect(result.inviteUrl).toBe(`https://ludo.com/sessions/session-1/join?token=${calledToken}`);
+    expect(result.inviteUrl).toBe('https://ludo.com/join?token=' + calledToken);
     expect(result.expiresAt).toBe(calledExpiresAt);
   });
 
@@ -74,7 +74,7 @@ describe('GenerateInviteUseCase', () => {
 
     const result = await useCase.execute('session-1', 'host-1');
 
-    expect(result.inviteUrl).toContain('http://localhost:3000/sessions/session-1/join?token=');
+    expect(result.inviteUrl).toContain('http://localhost:3000/join?token=');
   });
 
   it('throws SessionNotFoundError if session does not exist', async () => {
