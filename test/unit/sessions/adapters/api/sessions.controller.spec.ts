@@ -397,7 +397,11 @@ describe('SessionsController', () => {
     const invite = { inviteToken: 'token' };
     useCases.generateInvite.execute.mockResolvedValue(invite);
 
-    await expect(controller.generateInvite('session-1', user)).resolves.toBe(invite);
+    await expect(controller.generateInvite('session-1', user)).resolves.toMatchObject({
+      status: 'success',
+      data: invite,
+      timestamp: expect.any(String),
+    });
   });
 
   it.each([
