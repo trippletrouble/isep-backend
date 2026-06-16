@@ -72,6 +72,7 @@ import {
 import { MoveFigureResultType } from '../../application/use-cases/types/move-figure-result.type';
 import { AuthService } from '../../../auth/application/auth.service';
 import { ApiQuery } from '@nestjs/swagger';
+import { SuccessResponse } from '../../../common/interfaces/api-response.interface';
 
 @Controller('sessions')
 export class SessionsController {
@@ -103,7 +104,7 @@ export class SessionsController {
     @CurrentUser() user: User,
   ): Promise<GameStateType> {
     try {
-      return this.getGameStateUseCase.execute(user, sessionId);
+      return await this.getGameStateUseCase.execute(user, sessionId);
     } catch (error) {
       if (error instanceof SessionNotFoundError) {
         throw new NotFoundException({
@@ -391,7 +392,7 @@ export class SessionsController {
   async joinSession(
     @Param('id') sessionId: string,
     @Body() body: JoinSessionRequestDto,
-    @Query() queryInviteToken: string,
+    @Query('inviteToken') queryInviteToken: string | undefined,
     @CurrentUser() user: User,
   ): Promise<GameStateType> {
     try {
@@ -449,9 +450,18 @@ export class SessionsController {
   async generateInvite(
     @Param('id') sessionId: string,
     @CurrentUser() user: User,
-  ): Promise<InviteResponseDto> {
+  ): Promise<SuccessResponse<InviteResponseDto>> {
     try {
-      return await this.generateInviteUseCase.execute(sessionId, user.id);
+      const invite = await this.generateInviteUseCase.execute(
+        sessionId,
+        user.id,
+      );
+
+      return {
+        status: 'success',
+        timestamp: new Date().toISOString(),
+        data: invite,
+      };
     } catch (error) {
       if (error instanceof SessionNotFoundError) {
         throw new NotFoundException({

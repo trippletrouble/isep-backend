@@ -1,5 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { MoveFigureRequestDto } from '../dtos';
+import { Inject, Injectable, Optional } from '@nestjs/common';
+import { MoveFigureRequestDto } from '../dtos/move-figure-request.dto';
 import { SessionRepositoryPort } from '../../ports';
 import { GameStateCacheService } from '../services/game-state-cache.service';
 import {
@@ -17,6 +19,7 @@ import {
   MoveFigureResultType,
   MoveOutcomeType,
 } from './types/move-figure-result.type';
+import { SessionEventsService } from '../services';
 
 @Injectable()
 export class MoveFigureUseCase {
@@ -24,6 +27,8 @@ export class MoveFigureUseCase {
     @Inject(SessionRepositoryPort)
     private readonly sessionRepository: SessionRepositoryPort,
     private readonly possibleMoveCalculator: PossibleMoveCalculatorUseCase,
+    @Optional()
+    private readonly sessionEvents?: SessionEventsService,
     private readonly cache: GameStateCacheService,
   ) {}
 
@@ -102,6 +107,30 @@ export class MoveFigureUseCase {
     }
 
     this.cache.set(sessionId, updatedGameState).catch(() => {});
+
+    this.sessionEvents?.emit(sessionId, 'move_executed', {
+      outcome,
+      figureId: selectedMove.figureId,
+      fromPosition: selectedMove.fromPosition,
+      toPosition: selectedMove.toPosition,
+    });
+
+    if (
+      updatedGameState.currentPlayerId !== gameState.currentPlayerId ||
+      updatedGameState.turnNumber !== gameState.turnNumber
+    ) {
+      this.sessionEvents?.emit(sessionId, 'turn_changed', {
+        currentPlayerId: updatedGameState.currentPlayerId,
+        turnNumber: updatedGameState.turnNumber,
+      });
+    }
+
+    if (outcome === 'GAME_WON') {
+      this.sessionEvents?.emit(sessionId, 'game_ended', {
+        winnerId: updatedGameState.winnerId,
+        finishedAt: updatedGameState.lastUpdatedAt,
+      });
+    }
 
     return {
       figureId: selectedMove.figureId,

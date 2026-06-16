@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { SessionRepositoryPort } from '../../ports';
 import { GameStateCacheService } from '../services/game-state-cache.service';
 import {
@@ -6,6 +6,7 @@ import {
   NotHostError,
   SessionNotFoundError,
 } from './errors';
+import { SessionEventsService } from '../services';
 
 @Injectable()
 export class DeleteSessionUseCase {
@@ -13,6 +14,8 @@ export class DeleteSessionUseCase {
     @Inject(SessionRepositoryPort)
     private readonly sessionRepo: SessionRepositoryPort,
     private readonly cache: GameStateCacheService,
+    @Optional()
+    private readonly sessionEvents?: SessionEventsService,
   ) {}
 
   async execute(sessionId: string, userId: string): Promise<void> {
@@ -25,5 +28,6 @@ export class DeleteSessionUseCase {
     await this.sessionRepo.deleteSessionById(sessionId);
 
     this.cache.invalidate(sessionId).catch(() => {});
+    this.sessionEvents?.removeStream(sessionId);
   }
 }

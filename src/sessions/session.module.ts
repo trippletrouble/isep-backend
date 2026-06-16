@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { PrismaModule } from '../prisma/prisma.module';
 import { SessionRepositoryPort } from './ports';
 import { PrismaSessionRepository } from './adapters';
-import { SessionsController } from './adapters';
+import { SessionsController, SessionLiveController } from './adapters';
 import {
   CreateSessionUseCase,
   LeaveSessionUseCase,
@@ -28,6 +28,7 @@ import { HttpDiceClientAdapter } from './adapters/dice/http-dice-client.adapter'
 import { StartSessionUseCase } from './application';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { SessionEventsService } from './application/services';
 import { GameStateCacheService } from './application/services/game-state-cache.service';
 
 @Module({
@@ -42,7 +43,7 @@ import { GameStateCacheService } from './application/services/game-state-cache.s
       },
     ]),
   ],
-  controllers: [SessionsController],
+  controllers: [SessionsController, SessionLiveController],
   providers: [
     CreateSessionUseCase,
     GetGameStateUseCase,
@@ -64,6 +65,7 @@ import { GameStateCacheService } from './application/services/game-state-cache.s
     GetResultsUseCase,
     GetHistoryUseCase,
     GameStateCacheService,
+    SessionEventsService,
     {
       provide: SessionRepositoryPort,
       useClass: PrismaSessionRepository,
@@ -90,6 +92,7 @@ import { GameStateCacheService } from './application/services/game-state-cache.s
     GetSessionPlayersUseCase,
     DeleteSessionUseCase,
     GetResultsUseCase,
+    SessionEventsService,
     GameStateCacheService,
   ],
 })
