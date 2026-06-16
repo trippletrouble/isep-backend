@@ -30,7 +30,6 @@ export class MoveFigureUseCase {
     private readonly sessionEvents?: SessionEventsService,
   ) {}
 
-
   async execute(
     sessionId: string,
     userId: string,
