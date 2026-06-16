@@ -392,7 +392,7 @@ export class SessionsController {
   async joinSession(
     @Param('id') sessionId: string,
     @Body() body: JoinSessionRequestDto,
-    @Query('inviteToken') queryInviteToken?: string,
+    @Query('inviteToken') queryInviteToken: string | undefined,
     @CurrentUser() user: User,
   ): Promise<GameStateType> {
     try {
