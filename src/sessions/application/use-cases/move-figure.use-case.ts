@@ -1,5 +1,5 @@
-import { Inject, Injectable, Optional } from '@nestjs/common';
 import { MoveFigureRequestDto } from '../dtos';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { SessionRepositoryPort } from '../../ports';
 import { GameStateCacheService } from '../services/game-state-cache.service';
 import {
