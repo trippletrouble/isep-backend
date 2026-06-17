@@ -2,11 +2,19 @@ import { Module } from '@nestjs/common';
 import { PrismaModule } from '../prisma/prisma.module';
 import { SessionRepositoryPort } from './ports';
 import { PrismaSessionRepository } from './adapters';
-import { SessionsController } from './adapters';
+import { SessionsController, SessionLiveController } from './adapters';
 import {
   CreateSessionUseCase,
+  LeaveSessionUseCase,
   ListOpenSessionsUseCase,
+  ReconnectUseCase,
   UpdateLobbySettingsUseCase,
+  GetHistoryUseCase,
+  GetResultsUseCase,
+  DeleteSessionUseCase,
+  GetSessionPlayersUseCase,
+  JoinSessionUseCase,
+  GenerateInviteUseCase,
 } from './application';
 import { AuthModule } from '../auth/auth.module';
 import { GetGameStateUseCase } from './application/use-cases/get-game-state.use-case';
@@ -20,6 +28,7 @@ import { HttpDiceClientAdapter } from './adapters/dice/http-dice-client.adapter'
 import { StartSessionUseCase } from './application';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { SessionEventsService } from './application/services';
 
 export class AppModule {}
 @Module({
@@ -34,12 +43,14 @@ export class AppModule {}
       },
     ]),
   ],
-  controllers: [SessionsController],
+  controllers: [SessionsController, SessionLiveController],
   providers: [
     CreateSessionUseCase,
     GetGameStateUseCase,
     StartSessionUseCase,
     ListOpenSessionsUseCase,
+    LeaveSessionUseCase,
+    ReconnectUseCase,
     GetGameStateUseCase,
     RollDiceUseCase,
     GetPossibleMovesUseCase,
@@ -48,6 +59,13 @@ export class AppModule {}
     MoveFigureUseCase,
     HttpDiceClientAdapter,
     UpdateLobbySettingsUseCase,
+    JoinSessionUseCase,
+    GenerateInviteUseCase,
+    GetSessionPlayersUseCase,
+    DeleteSessionUseCase,
+    GetResultsUseCase,
+    GetHistoryUseCase,
+    SessionEventsService,
     {
       provide: SessionRepositoryPort,
       useClass: PrismaSessionRepository,
@@ -63,10 +81,18 @@ export class AppModule {}
     CreateSessionUseCase,
     ListOpenSessionsUseCase,
     RollDiceUseCase,
+    LeaveSessionUseCase,
+    ReconnectUseCase,
     MoveFigureUseCase,
     GetPossibleMovesUseCase,
     GetLobbyUseCase,
     UpdateLobbySettingsUseCase,
+    JoinSessionUseCase,
+    GenerateInviteUseCase,
+    GetSessionPlayersUseCase,
+    DeleteSessionUseCase,
+    GetResultsUseCase,
+    SessionEventsService,
   ],
 })
 export class SessionModule {}

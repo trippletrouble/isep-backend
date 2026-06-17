@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { MoveFigureRequestDto } from '../dtos/move-figure-request.dto';
 import { SessionRepositoryPort } from '../../ports';
 import { LudoEngine } from '../../domain';
@@ -12,6 +12,7 @@ import {
 import {
   MoveFigureResultType,
 } from './types/move-figure-result.type';
+import { SessionEventsService } from '../services';
 
 @Injectable()
 export class MoveFigureUseCase {
@@ -19,6 +20,8 @@ export class MoveFigureUseCase {
     @Inject(SessionRepositoryPort)
     private readonly sessionRepository: SessionRepositoryPort,
     private readonly ludoEngine: LudoEngine,
+    @Optional()
+    private readonly sessionEvents?: SessionEventsService,
   ) {}
 
   async execute(
@@ -75,6 +78,30 @@ export class MoveFigureUseCase {
 
     if (!updatedGameState) {
       throw new SessionNotFoundError();
+    }
+
+    this.sessionEvents?.emit(sessionId, 'move_executed', {
+      outcome,
+      figureId: selectedMove.figureId,
+      fromPosition: selectedMove.fromPosition,
+      toPosition: selectedMove.toPosition,
+    });
+
+    if (
+      updatedGameState.currentPlayerId !== gameState.currentPlayerId ||
+      updatedGameState.turnNumber !== gameState.turnNumber
+    ) {
+      this.sessionEvents?.emit(sessionId, 'turn_changed', {
+        currentPlayerId: updatedGameState.currentPlayerId,
+        turnNumber: updatedGameState.turnNumber,
+      });
+    }
+
+    if (outcome === 'GAME_WON') {
+      this.sessionEvents?.emit(sessionId, 'game_ended', {
+        winnerId: updatedGameState.winnerId,
+        finishedAt: updatedGameState.lastUpdatedAt,
+      });
     }
 
     return {
