@@ -1,7 +1,8 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { MoveFigureRequestDto } from '../dtos/move-figure-request.dto';
+import { MoveFigureRequestDto } from '../dtos';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { SessionRepositoryPort } from '../../ports';
-import { LudoEngine } from '../../domain';
+import { LudoEngine, MoveResult } from '../../domain';
+import { GameStateCacheService } from '../services/game-state-cache.service';
 import {
   DiceNotRolledError,
   InvalidMoveError,
@@ -9,16 +10,18 @@ import {
   NotYourTurnError,
   SessionNotFoundError,
 } from './errors';
-import {
-  MoveFigureResultType,
-} from './types/move-figure-result.type';
+import { MoveFigureResultType } from './types/move-figure-result.type';
+import { SessionEventsService } from '../services';
 
 @Injectable()
 export class MoveFigureUseCase {
   constructor(
     @Inject(SessionRepositoryPort)
     private readonly sessionRepository: SessionRepositoryPort,
+    private readonly cache: GameStateCacheService,
     private readonly ludoEngine: LudoEngine,
+    @Optional()
+    private readonly sessionEvents?: SessionEventsService,
   ) {}
 
   async execute(
@@ -43,17 +46,17 @@ export class MoveFigureUseCase {
       throw new DiceNotRolledError();
     }
 
-    let result;
+    let result: MoveResult;
     try {
       result = this.ludoEngine.applyMove(
         gameState,
         request.figureId,
         gameState.lastDiceValue,
       );
-      if (result.toPosition !== request.toPosition) {
-        throw new InvalidMoveError();
-      }
-    } catch (error) {
+    } catch {
+      throw new InvalidMoveError();
+    }
+    if (result.toPosition !== request.toPosition) {
       throw new InvalidMoveError();
     }
 
@@ -75,6 +78,32 @@ export class MoveFigureUseCase {
 
     if (!updatedGameState) {
       throw new SessionNotFoundError();
+    }
+
+    this.cache.set(sessionId, updatedGameState).catch(() => {});
+
+    this.sessionEvents?.emit(sessionId, 'move_executed', {
+      outcome: result.outcome,
+      figureId: result.figureId,
+      fromPosition: result.fromPosition,
+      toPosition: result.toPosition,
+    });
+
+    if (
+      updatedGameState.currentPlayerId !== gameState.currentPlayerId ||
+      updatedGameState.turnNumber !== gameState.turnNumber
+    ) {
+      this.sessionEvents?.emit(sessionId, 'turn_changed', {
+        currentPlayerId: updatedGameState.currentPlayerId,
+        turnNumber: updatedGameState.turnNumber,
+      });
+    }
+
+    if (result.outcome === 'GAME_WON') {
+      this.sessionEvents?.emit(sessionId, 'game_ended', {
+        winnerId: updatedGameState.winnerId,
+        finishedAt: updatedGameState.lastUpdatedAt,
+      });
     }
 
     return {

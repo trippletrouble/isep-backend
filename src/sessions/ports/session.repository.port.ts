@@ -6,6 +6,7 @@ import { SessionWithParticipants } from '../application/use-cases/types';
 import { ParticipantDto } from '../application/dtos/participant.dto';
 import { GameParticipant } from '../../generated/prisma-class/game_participant';
 import { ApplyMoveData } from '../application/use-cases/types/apply-move-data.type';
+import { GameHistoryEventDto } from '../application/dtos/game-history-event.dto';
 
 export abstract class SessionRepositoryPort {
   abstract createSession(
@@ -28,6 +29,13 @@ export abstract class SessionRepositoryPort {
       consecutiveSixes: number;
     },
   ): Promise<void>;
+  abstract addInviteToken(sessionId: string, inviteToken: string);
+  abstract findByInviteToken(inviteToken: string): Promise<Session | null>;
+  abstract updateSessionInvite(
+    sessionId: string,
+    inviteToken: ***ENTFERNT*** | null,
+    inviteTokenExpiresAt: ***ENTFERNT*** | null,
+  ): Promise<void>;
 
   abstract passTurn(sessionId: string, currentPlayerId: string): Promise<void>;
   abstract updateSessionById(
@@ -41,5 +49,11 @@ export abstract class SessionRepositoryPort {
     page: number,
     size: number,
   ): Promise<{ items: Session[]; total: number }>;
+  abstract removeParticipant(sessionId: string, userId: string): Promise<void>;
+  abstract deleteSession(sessionId: string): Promise<void>;
   abstract applyMove(data: ApplyMoveData): Promise<void>;
+  abstract findHistoryBySessionId(
+    sessionId: string,
+  ): Promise<GameHistoryEventDto[]>;
+  abstract deleteSessionById(id: string): Promise<void>;
 }

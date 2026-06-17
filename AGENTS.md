@@ -59,18 +59,6 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
 
 
-## Project-Specific Guidelines
-
-**Tech-Stack:**
-- NestJS
-- TypeScript
-- Prisma ORM
-- PostgreSQL
-
-**Project-Specific Guidelines:**
-- Always use hex-arch pattern
-
-
 ## Issue Tracking
 
 Whenever you encounter a bug, blocker, or unexpected behavior — **before continuing work** — add an entry to `Issues.md` in the project root.
@@ -109,3 +97,14 @@ Root cause and resolution. Include code snippets, config changes, or commands as
   - **High** — core feature broken, no workaround
   - **Medium** — degraded behavior, workaround exists
   - **Low** — cosmetic, minor inconsistency
+
+## Project-Specific Guidelines
+
+**Tech-Stack:**
+- NestJS
+- TypeScript
+- Prisma ORM
+- PostgreSQL
+
+**Project-Specific Guidelines:**
+- Always use hex-arch pattern

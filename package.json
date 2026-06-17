@@ -18,10 +18,12 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json --runInBand"
+    "test:e2e": "jest --config ./test/jest-e2e.json --runInBand",
+    "test:cov:auth-session": "jest test/unit/auth test/unit/sessions --runInBand --coverage --collectCoverageFrom=src/auth/adapters/api/auth.controller.ts --collectCoverageFrom=src/sessions/adapters/api/sessions.controller.ts"
   },
   "dependencies": {
     "@jannis6023/prisma-class-generator": "^7.0.2",
+    "@nestjs-modules/ioredis": "^2.2.1",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.0.1",
@@ -35,6 +37,7 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "cookie-parser": "^1.4.7",
+    "ioredis": "^5.11.1",
     "openid-client": "^6.8.4",
     "passport": "^0.7.0",
     "passport-oauth2": "^1.8.0",
@@ -79,15 +82,34 @@
       "json",
       "ts"
     ],
-    "rootDir": "src",
+    "rootDir": ".",
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
+    "moduleNameMapper": {
+      "^src/(.*)$": "<rootDir>/src/$1"
+    },
     "collectCoverageFrom": [
-      "**/*.(t|j)s"
+      "src/**/*.(t|j)s"
     ],
-    "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
+    "coverageDirectory": "coverage",
+    "testEnvironment": "node",
+    "coverageThreshold": {
+      "global": {
+        "branches": 80
+      },
+      "src/auth/adapters/api/auth.controller.ts": {
+        "functions": 80,
+        "lines": 80,
+        "statements": 80
+      },
+      "src/sessions/adapters/api/sessions.controller.ts": {
+        "branches": 80,
+        "functions": 80,
+        "lines": 80,
+        "statements": 80
+      }
+    }
   }
 }

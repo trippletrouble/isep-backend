@@ -1,34 +1,41 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { SessionRepositoryPort } from '../../ports/session.repository.port';
 import { GameStateType } from './types/game-state.type';
 import { User } from 'src/generated/prisma-class/user';
+import { GameStateCacheService } from '../services/game-state-cache.service';
 
 @Injectable()
 export class GetGameStateUseCase {
   constructor(
     @Inject(SessionRepositoryPort)
     private readonly sessionRepository: SessionRepositoryPort,
+    private readonly cache: GameStateCacheService,
   ) {}
 
   async execute(user: User, sessionId: string): Promise<GameStateType> {
-    const gameState = await this.sessionRepository.findGameStateById(sessionId);
+    let gameState = await this.cache.get(sessionId);
+
     if (!gameState) {
-      throw new NotFoundException({
+      gameState = await this.sessionRepository.findGameStateById(sessionId);
+      if (!gameState) {
+        throw new NotFoundException({
+          status: 'error',
+          code: 'SESSION_NOT_FOUND',
+          message: 'Session not found',
+          timestamp: new Date().toISOString(),
+        });
+      }
+      this.cache.set(sessionId, gameState).catch(() => {});
+    }
+
+    const isInGame = gameState.players.some((player) => player.id === user.id);
+    if (!isInGame) {
+      throw new ForbiddenException({
         status: 'error',
-        code: 'SESSION_NOT_FOUND',
-        message: 'Session not found',
+        code: 'NOT_IN_GAME',
+        message: 'You are not part of this game',
         timestamp: new Date().toISOString(),
       });
-    }
-    let isInGame: boolean;
-    isInGame = false;
-    gameState?.players.forEach((player) => {
-      if (player.id == user.id) {
-        isInGame = true;
-      }
-    });
-    if (!isInGame) {
-      throw new Error('You are not part of the game');
     }
     return gameState;
   }

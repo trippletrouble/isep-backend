@@ -1,7 +1,8 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { SessionRepositoryPort } from 'src/sessions/ports';
 import { DiceClientPort } from 'src/sessions/ports/dice-client.port';
 import { LudoEngine } from '../../domain';
+import { GameStateCacheService } from '../services/game-state-cache.service';
 import {
   DiceAlreadyRolledError,
   InvalidSessionStatusError,
@@ -9,6 +10,8 @@ import {
   SessionNotFoundError,
 } from './errors';
 import { DiceRollResultType } from './types/dice-roll-result.type';
+import { SessionEventsService } from '../services';
+
 @Injectable()
 export class RollDiceUseCase {
   constructor(
@@ -16,7 +19,10 @@ export class RollDiceUseCase {
     private readonly sessionRepository: SessionRepositoryPort,
     @Inject(DiceClientPort)
     private readonly diceClient: DiceClientPort,
+    private readonly cache: GameStateCacheService,
     private readonly ludoEngine: LudoEngine,
+    @Optional()
+    private readonly sessionEvents?: SessionEventsService,
   ) {}
 
   async execute(
@@ -59,6 +65,24 @@ export class RollDiceUseCase {
 
     if (!updatedGameState) {
       throw new SessionNotFoundError();
+    }
+
+    this.cache.set(sessionId, updatedGameState).catch(() => {});
+
+    this.sessionEvents?.emit(sessionId, 'dice_rolled', {
+      value,
+      playerId,
+      hasMoves: result.hasMoves,
+      rollAgain: result.rollAgain,
+      consecutiveSixes: result.consecutiveSixes,
+      turnForfeit: result.turnForfeit,
+    });
+
+    if (!result.hasMoves || result.turnForfeit) {
+      this.sessionEvents?.emit(sessionId, 'turn_changed', {
+        currentPlayerId: updatedGameState.currentPlayerId,
+        turnNumber: updatedGameState.turnNumber,
+      });
     }
 
     return {

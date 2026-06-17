@@ -2,11 +2,19 @@ import { Module } from '@nestjs/common';
 import { PrismaModule } from '../prisma/prisma.module';
 import { SessionRepositoryPort } from './ports';
 import { PrismaSessionRepository } from './adapters';
-import { SessionsController } from './adapters';
+import { SessionsController, SessionLiveController } from './adapters';
 import {
   CreateSessionUseCase,
+  LeaveSessionUseCase,
   ListOpenSessionsUseCase,
+  ReconnectUseCase,
   UpdateLobbySettingsUseCase,
+  GetHistoryUseCase,
+  GetResultsUseCase,
+  DeleteSessionUseCase,
+  GetSessionPlayersUseCase,
+  JoinSessionUseCase,
+  GenerateInviteUseCase,
 } from './application';
 import { AuthModule } from '../auth/auth.module';
 import { GetGameStateUseCase } from './application/use-cases/get-game-state.use-case';
@@ -20,9 +28,10 @@ import { HttpDiceClientAdapter } from './adapters/dice/http-dice-client.adapter'
 import { StartSessionUseCase } from './application';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { SessionEventsService } from './application/services';
+import { GameStateCacheService } from './application/services/game-state-cache.service';
 import { SessionSseService } from './session-sse.service';
 
-export class AppModule {}
 @Module({
   imports: [
     PrismaModule,
@@ -35,13 +44,14 @@ export class AppModule {}
       },
     ]),
   ],
-  controllers: [SessionsController],
+  controllers: [SessionsController, SessionLiveController],
   providers: [
     CreateSessionUseCase,
     GetGameStateUseCase,
     StartSessionUseCase,
     ListOpenSessionsUseCase,
-    GetGameStateUseCase,
+    LeaveSessionUseCase,
+    ReconnectUseCase,
     RollDiceUseCase,
     GetPossibleMovesUseCase,
     GetLobbyUseCase,
@@ -49,6 +59,14 @@ export class AppModule {}
     MoveFigureUseCase,
     HttpDiceClientAdapter,
     UpdateLobbySettingsUseCase,
+    JoinSessionUseCase,
+    GenerateInviteUseCase,
+    GetSessionPlayersUseCase,
+    DeleteSessionUseCase,
+    GetResultsUseCase,
+    GetHistoryUseCase,
+    GameStateCacheService,
+    SessionEventsService,
     SessionSseService,
     {
       provide: SessionRepositoryPort,
@@ -65,11 +83,20 @@ export class AppModule {}
     CreateSessionUseCase,
     ListOpenSessionsUseCase,
     RollDiceUseCase,
+    LeaveSessionUseCase,
+    ReconnectUseCase,
     MoveFigureUseCase,
     GetPossibleMovesUseCase,
     GetLobbyUseCase,
     UpdateLobbySettingsUseCase,
     SessionSseService,
+    JoinSessionUseCase,
+    GenerateInviteUseCase,
+    GetSessionPlayersUseCase,
+    DeleteSessionUseCase,
+    GetResultsUseCase,
+    SessionEventsService,
+    GameStateCacheService,
   ],
 })
 export class SessionModule {}
