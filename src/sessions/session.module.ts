@@ -30,6 +30,7 @@ import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { SessionEventsService } from './application/services';
 import { GameStateCacheService } from './application/services/game-state-cache.service';
+import { SessionSseService } from './session-sse.service';
 
 @Module({
   imports: [
@@ -66,6 +67,7 @@ import { GameStateCacheService } from './application/services/game-state-cache.s
     GetHistoryUseCase,
     GameStateCacheService,
     SessionEventsService,
+    SessionSseService,
     {
       provide: SessionRepositoryPort,
       useClass: PrismaSessionRepository,
@@ -87,6 +89,7 @@ import { GameStateCacheService } from './application/services/game-state-cache.s
     GetPossibleMovesUseCase,
     GetLobbyUseCase,
     UpdateLobbySettingsUseCase,
+    SessionSseService,
     JoinSessionUseCase,
     GenerateInviteUseCase,
     GetSessionPlayersUseCase,

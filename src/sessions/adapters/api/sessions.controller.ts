@@ -13,9 +13,12 @@ import {
   ForbiddenException,
   ConflictException,
   NotFoundException,
+  Sse,
+  MessageEvent,
   Delete,
 } from '@nestjs/common';
 import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
+import { Observable } from 'rxjs';
 
 import {
   CreateSessionUseCase,
@@ -70,6 +73,7 @@ import {
   ParticipantNotFoundError,
 } from '../../application/use-cases/errors';
 import { MoveFigureResultType } from '../../application/use-cases/types/move-figure-result.type';
+import { SessionSseService } from '../../session-sse.service';
 import { AuthService } from '../../../auth/application/auth.service';
 import { ApiQuery } from '@nestjs/swagger';
 import { SuccessResponse } from '../../../common/interfaces/api-response.interface';
@@ -89,6 +93,7 @@ export class SessionsController {
     private readonly getPossibleMovesUseCase: GetPossibleMovesUseCase,
     private readonly getLobbyUseCase: GetLobbyUseCase,
     private readonly updateLobbySettingsUseCase: UpdateLobbySettingsUseCase,
+    private readonly sseService: SessionSseService,
     private readonly deleteSessionUseCase: DeleteSessionUseCase,
     private readonly getSessionPlayersUseCase: GetSessionPlayersUseCase,
     private readonly joinSessionUseCase: JoinSessionUseCase,
@@ -96,6 +101,15 @@ export class SessionsController {
     private readonly getResultsUseCase: GetResultsUseCase,
     private readonly getHistoryUseCase: GetHistoryUseCase,
   ) {}
+
+  @Sse(':id/updates')
+  @UseGuards(SessionGuard)
+  async updates(
+    @Param('id') sessionId: string,
+    @CurrentUser() user: User,
+  ): Promise<Observable<MessageEvent>> {
+    return this.sseService.connect(sessionId, user.id);
+  }
 
   @Get(':id')
   @UseGuards(SessionGuard)
@@ -204,11 +218,13 @@ export class SessionsController {
     @CurrentUser() user: User,
   ): Promise<LobbySettingsDto> {
     try {
-      return await this.updateLobbySettingsUseCase.execute(
+      const result = await this.updateLobbySettingsUseCase.execute(
         sessionId,
         user.id,
         settings,
       );
+      await this.sseService.emitState(sessionId);
+      return result;
     } catch (error) {
       if (error instanceof SessionNotFoundError) {
         throw new NotFoundException({
@@ -242,7 +258,13 @@ export class SessionsController {
     @CurrentUser() user: User,
   ): Promise<MoveFigureResultType> {
     try {
-      return await this.moveFigureUseCase.execute(sessionId, user.id, request);
+      const result = await this.moveFigureUseCase.execute(
+        sessionId,
+        user.id,
+        request,
+      );
+      await this.sseService.emitState(sessionId, result.gameState);
+      return result;
     } catch (error) {
       if (error instanceof InvalidMoveError) {
         throw new BadRequestException({
@@ -333,10 +355,12 @@ export class SessionsController {
     @CurrentUser() user: User,
   ): Promise<DiceRollResultType> {
     try {
-      return await this.rollDiceUseCase.execute(sessionId, user.id);
+      const result = await this.rollDiceUseCase.execute(sessionId, user.id);
+      await this.sseService.emitState(sessionId, result.gameState);
+      return result;
     } catch (error) {
       if (error instanceof NotYourTurnError) {
-        throw new BadRequestException({
+        throw new ForbiddenException({
           code: 'NOT_YOUR_TURN',
           message: error.message,
         });
@@ -518,7 +542,9 @@ export class SessionsController {
     }
 
     try {
-      return await this.startSessionUseCase.execute(sessionId, user);
+      const result = await this.startSessionUseCase.execute(sessionId, user);
+      await this.sseService.emitState(sessionId);
+      return result;
     } catch (error) {
       if (error instanceof NotEnoughPlayersError) {
         throw new HttpException(
