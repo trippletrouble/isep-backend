@@ -1,6 +1,7 @@
 import { Inject, Injectable, Optional } from '@nestjs/common';
-import { MoveFigureRequestDto } from '../dtos/move-figure-request.dto';
+import { MoveFigureRequestDto } from '../dtos';
 import { SessionRepositoryPort } from '../../ports';
+import { GameStateCacheService } from '../services/game-state-cache.service';
 import {
   FINAL_GOAL_POSITION,
   PossibleMoveCalculatorUseCase,
@@ -24,6 +25,7 @@ export class MoveFigureUseCase {
     @Inject(SessionRepositoryPort)
     private readonly sessionRepository: SessionRepositoryPort,
     private readonly possibleMoveCalculator: PossibleMoveCalculatorUseCase,
+    private readonly cache: GameStateCacheService,
     @Optional()
     private readonly sessionEvents?: SessionEventsService,
   ) {}
@@ -101,6 +103,8 @@ export class MoveFigureUseCase {
     if (!updatedGameState) {
       throw new SessionNotFoundError();
     }
+
+    this.cache.set(sessionId, updatedGameState).catch(() => {});
 
     this.sessionEvents?.emit(sessionId, 'move_executed', {
       outcome,

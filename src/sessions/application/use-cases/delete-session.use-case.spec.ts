@@ -1,5 +1,6 @@
 import { DeleteSessionUseCase } from './delete-session.use-case';
 import { SessionRepositoryPort } from '../../ports';
+import { GameStateCacheService } from '../services/game-state-cache.service';
 import {
   InvalidSessionStatusError,
   NotHostError,
@@ -10,6 +11,7 @@ import { Session } from '../../../generated/prisma-class/session';
 describe('DeleteSessionUseCase', () => {
   let useCase: DeleteSessionUseCase;
   let mockSessionRepo: jest.Mocked<SessionRepositoryPort>;
+  let mockCache: jest.Mocked<GameStateCacheService>;
 
   beforeEach(() => {
     mockSessionRepo = {
@@ -17,7 +19,11 @@ describe('DeleteSessionUseCase', () => {
       deleteSessionById: jest.fn(),
     } as unknown as jest.Mocked<SessionRepositoryPort>;
 
-    useCase = new DeleteSessionUseCase(mockSessionRepo);
+    mockCache = {
+      invalidate: jest.fn().mockResolvedValue(undefined),
+    } as any;
+
+    useCase = new DeleteSessionUseCase(mockSessionRepo, mockCache);
   });
 
   it('should successfully delete a session when status is WAITING and user is the host', async () => {
@@ -36,6 +42,7 @@ describe('DeleteSessionUseCase', () => {
 
     expect(mockSessionRepo.findByIdMinimal).toHaveBeenCalledWith(sessionId);
     expect(mockSessionRepo.deleteSessionById).toHaveBeenCalledWith(sessionId);
+    expect(mockCache.invalidate).toHaveBeenCalledWith(sessionId);
   });
 
   it('should throw SessionNotFoundError when session does not exist', async () => {
@@ -89,5 +96,22 @@ describe('DeleteSessionUseCase', () => {
 
     expect(mockSessionRepo.findByIdMinimal).toHaveBeenCalledWith(sessionId);
     expect(mockSessionRepo.deleteSessionById).not.toHaveBeenCalled();
+  });
+
+  it('should not call cache.invalidate when deleteSessionById throws', async () => {
+    const sessionId = 'session-123';
+    const hostId = 'host-456';
+    const mockSession = {
+      id: sessionId,
+      hostId: hostId,
+      status: 'WAITING',
+    } as Session;
+
+    mockSessionRepo.findByIdMinimal.mockResolvedValue(mockSession);
+    mockSessionRepo.deleteSessionById.mockRejectedValue(new Error('DB error'));
+
+    await expect(useCase.execute(sessionId, hostId)).rejects.toThrow('DB error');
+
+    expect(mockCache.invalidate).not.toHaveBeenCalled();
   });
 });

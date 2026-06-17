@@ -4,6 +4,7 @@ import { SessionRepositoryPort } from '../../ports';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { User } from '../../../generated/prisma-class/user';
 import { Position, StartSessionInfoType } from './types';
+import { GameStateCacheService } from '../services/game-state-cache.service';
 import {
   InvalidSessionStatusError,
   NotEnoughPlayersError,
@@ -34,6 +35,7 @@ export class StartSessionUseCase {
     @Inject(SessionRepositoryPort)
     private readonly sessionRepo: SessionRepositoryPort,
     private readonly prisma: PrismaService,
+    private readonly cache: GameStateCacheService,
     @Optional()
     private readonly sessionEvents?: SessionEventsService,
   ) {}
@@ -100,6 +102,12 @@ export class StartSessionUseCase {
         });
       }
     });
+
+    const updatedState = await this.sessionRepo.findGameStateById(sessionId);
+    if (updatedState) {
+      this.cache.set(sessionId, updatedState).catch(() => {});
+    }
+
     const result = {
       sessionId,
       status: 'IN_PROGRESS',
