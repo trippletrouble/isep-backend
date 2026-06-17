@@ -4,7 +4,7 @@ import {
   UserRepositoryPort,
 } from '../ports/user-repository.port';
 import { User } from '../../generated/prisma-class/user';
-import { UserRole } from '../../generated/prisma-client/enums';
+import { UserRole } from '..prisma-clientenums';
 
 export interface OidcProfile {
   sub: string;
@@ -17,12 +17,7 @@ export interface OidcProfile {
 export class AuthService {
   constructor(private readonly userRepository: UserRepositoryPort) {}
 
-  async findOrCreateUser(profile: {
-    sub: any;
-    username: any;
-    avatarUrl: any;
-    role: 'ADMIN' | 'PLAYER';
-  }): Promise<User> {
+  async findOrCreateUser(profile: OidcProfile): Promise<User> {
     if (!profile.sub || !profile.username) {
       throw new UnauthorizedException('Incomplete OIDC-Profile');
     }

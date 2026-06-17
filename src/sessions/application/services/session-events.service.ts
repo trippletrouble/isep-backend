@@ -2,7 +2,7 @@ import { Inject, Injectable, MessageEvent } from '@nestjs/common';
 import { interval, merge, Observable, of, Subject } from 'rxjs';
 import { finalize, map, takeUntil } from 'rxjs/operators';
 import { SessionRepositoryPort } from '../../ports';
-import { SessionNotFoundError } from '../use-cases/errors';
+import { SessionNotFoundError } from '../use-cases';
 import {
   SessionEventMessage,
   SessionEventPayloadMap,

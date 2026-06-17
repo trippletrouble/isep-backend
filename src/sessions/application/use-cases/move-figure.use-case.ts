@@ -1,7 +1,7 @@
 import { Inject, Injectable, Optional } from '@nestjs/common';
-import { MoveFigureRequestDto } from '../dtos/move-figure-request.dto';
+import { MoveFigureRequestDto } from '../dtos';
 import { SessionRepositoryPort } from '../../ports';
-import { LudoEngine } from '../../domain';
+import { LudoEngine, MoveResult } from '../../domain';
 import {
   DiceNotRolledError,
   InvalidMoveError,
@@ -9,9 +9,7 @@ import {
   NotYourTurnError,
   SessionNotFoundError,
 } from './errors';
-import {
-  MoveFigureResultType,
-} from './types/move-figure-result.type';
+import { MoveFigureResultType } from './types/move-figure-result.type';
 import { SessionEventsService } from '../services';
 
 @Injectable()
@@ -46,17 +44,17 @@ export class MoveFigureUseCase {
       throw new DiceNotRolledError();
     }
 
-    let result;
+    let result: MoveResult;
     try {
       result = this.ludoEngine.applyMove(
         gameState,
         request.figureId,
         gameState.lastDiceValue,
       );
-      if (result.toPosition !== request.toPosition) {
-        throw new InvalidMoveError();
-      }
-    } catch (error) {
+    } catch {
+      throw new InvalidMoveError();
+    }
+    if (result.toPosition !== request.toPosition) {
       throw new InvalidMoveError();
     }
 
@@ -81,10 +79,10 @@ export class MoveFigureUseCase {
     }
 
     this.sessionEvents?.emit(sessionId, 'move_executed', {
-      outcome,
-      figureId: selectedMove.figureId,
-      fromPosition: selectedMove.fromPosition,
-      toPosition: selectedMove.toPosition,
+      outcome: result.outcome,
+      figureId: result.figureId,
+      fromPosition: result.fromPosition,
+      toPosition: result.toPosition,
     });
 
     if (
@@ -97,7 +95,7 @@ export class MoveFigureUseCase {
       });
     }
 
-    if (outcome === 'GAME_WON') {
+    if (result.outcome === 'GAME_WON') {
       this.sessionEvents?.emit(sessionId, 'game_ended', {
         winnerId: updatedGameState.winnerId,
         finishedAt: updatedGameState.lastUpdatedAt,

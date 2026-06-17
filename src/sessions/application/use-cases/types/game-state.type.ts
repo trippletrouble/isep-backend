@@ -3,7 +3,7 @@ import {
   GameMode,
   BoardTheme,
   AdditionalRule,
-} from '../../../domain/model/session.model';
+} from '../../../domain';
 import { GameStateFromPlayerType } from './game-state-from-Player.type';
 import { GameStateFigureType } from './game-state-figure.type';
 
