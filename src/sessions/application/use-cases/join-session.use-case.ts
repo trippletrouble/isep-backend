@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { SessionRepositoryPort } from '../../ports';
+import { GameStateCacheService } from '../services/game-state-cache.service';
 import {
   SessionNotFoundError,
   InvalidSessionStatusError,
@@ -20,6 +21,7 @@ export class JoinSessionUseCase {
   constructor(
     @Inject(SessionRepositoryPort)
     private readonly sessionRepo: SessionRepositoryPort,
+    private readonly cache: GameStateCacheService,
   ) {}
 
   async execute(
@@ -41,6 +43,7 @@ export class JoinSessionUseCase {
     if (isAlreadyParticipant) {
       const gameState = await this.sessionRepo.findGameStateById(sessionId);
       if (!gameState) throw new SessionNotFoundError();
+      this.cache.set(sessionId, gameState).catch(() => {});
       return gameState;
     }
 
@@ -102,6 +105,8 @@ export class JoinSessionUseCase {
 
     const gameState = await this.sessionRepo.findGameStateById(sessionId);
     if (!gameState) throw new SessionNotFoundError();
+
+    this.cache.set(sessionId, gameState).catch(() => {});
 
     return gameState;
   }
