@@ -4,7 +4,7 @@ import {
   UserRepositoryPort,
 } from '../ports/user-repository.port';
 import { User } from '../../generated/prisma-class/user';
-import { UserRole } from '..prisma-clientenums';
+import { UserRole } from '../../generated/prisma-client/enums';
 
 export interface OidcProfile {
   sub: string;

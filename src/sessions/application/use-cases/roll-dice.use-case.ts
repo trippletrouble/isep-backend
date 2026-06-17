@@ -3,7 +3,6 @@ import { SessionRepositoryPort } from 'src/sessions/ports';
 import { DiceClientPort } from 'src/sessions/ports/dice-client.port';
 import { LudoEngine } from '../../domain';
 import { GameStateCacheService } from '../services/game-state-cache.service';
-import { PossibleMoveCalculatorUseCase } from './possible-move-calculator.use-case';
 import {
   DiceAlreadyRolledError,
   InvalidSessionStatusError,
@@ -20,7 +19,6 @@ export class RollDiceUseCase {
     private readonly sessionRepository: SessionRepositoryPort,
     @Inject(DiceClientPort)
     private readonly diceClient: DiceClientPort,
-    private readonly possibleMoveCalculator: PossibleMoveCalculatorUseCase,
     private readonly cache: GameStateCacheService,
     private readonly ludoEngine: LudoEngine,
     @Optional()
@@ -74,13 +72,13 @@ export class RollDiceUseCase {
     this.sessionEvents?.emit(sessionId, 'dice_rolled', {
       value,
       playerId,
-      hasMoves,
-      rollAgain,
-      consecutiveSixes,
-      turnForfeit,
+      hasMoves: result.hasMoves,
+      rollAgain: result.rollAgain,
+      consecutiveSixes: result.consecutiveSixes,
+      turnForfeit: result.turnForfeit,
     });
 
-    if (!hasMoves || turnForfeit) {
+    if (!result.hasMoves || result.turnForfeit) {
       this.sessionEvents?.emit(sessionId, 'turn_changed', {
         currentPlayerId: updatedGameState.currentPlayerId,
         turnNumber: updatedGameState.turnNumber,

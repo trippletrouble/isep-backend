@@ -1,13 +1,8 @@
 import { MoveFigureRequestDto } from '../dtos';
 import { Inject, Injectable, Optional } from '@nestjs/common';
-import { MoveFigureRequestDto } from '../dtos';
 import { SessionRepositoryPort } from '../../ports';
 import { LudoEngine, MoveResult } from '../../domain';
 import { GameStateCacheService } from '../services/game-state-cache.service';
-import {
-  FINAL_GOAL_POSITION,
-  PossibleMoveCalculatorUseCase,
-} from './possible-move-calculator.use-case';
 import {
   DiceNotRolledError,
   InvalidMoveError,
@@ -23,7 +18,6 @@ export class MoveFigureUseCase {
   constructor(
     @Inject(SessionRepositoryPort)
     private readonly sessionRepository: SessionRepositoryPort,
-    private readonly possibleMoveCalculator: PossibleMoveCalculatorUseCase,
     private readonly cache: GameStateCacheService,
     private readonly ludoEngine: LudoEngine,
     @Optional()
