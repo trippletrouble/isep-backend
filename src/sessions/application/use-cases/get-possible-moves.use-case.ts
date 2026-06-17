@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { SessionRepositoryPort } from '../../ports';
-import { PossibleMoveCalculatorUseCase } from './possible-move-calculator.use-case';
+import { LudoEngine } from '../../domain';
 import {
   DiceNotRolledError,
   InvalidSessionStatusError,
@@ -14,7 +14,7 @@ export class GetPossibleMovesUseCase {
   constructor(
     @Inject(SessionRepositoryPort)
     private readonly sessionRepository: SessionRepositoryPort,
-    private readonly possibleMoveCalculator: PossibleMoveCalculatorUseCase,
+    private readonly ludoEngine: LudoEngine,
   ) {}
 
   async execute(
@@ -41,7 +41,7 @@ export class GetPossibleMovesUseCase {
 
     return {
       diceValue: gameState.lastDiceValue,
-      possibleMoves: this.possibleMoveCalculator.calculate(
+      possibleMoves: this.ludoEngine.getPossibleMoves(
         gameState,
         playerId,
         gameState.lastDiceValue,

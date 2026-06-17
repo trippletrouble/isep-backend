@@ -1,8 +1,8 @@
 import { Inject, Injectable, Optional } from '@nestjs/common';
 import { SessionRepositoryPort } from 'src/sessions/ports';
 import { DiceClientPort } from 'src/sessions/ports/dice-client.port';
+import { LudoEngine } from '../../domain';
 import { GameStateCacheService } from '../services/game-state-cache.service';
-import { PossibleMoveCalculatorUseCase } from './possible-move-calculator.use-case';
 import {
   DiceAlreadyRolledError,
   InvalidSessionStatusError,
@@ -19,8 +19,8 @@ export class RollDiceUseCase {
     private readonly sessionRepository: SessionRepositoryPort,
     @Inject(DiceClientPort)
     private readonly diceClient: DiceClientPort,
-    private readonly possibleMoveCalculator: PossibleMoveCalculatorUseCase,
     private readonly cache: GameStateCacheService,
+    private readonly ludoEngine: LudoEngine,
     @Optional()
     private readonly sessionEvents?: SessionEventsService,
   ) {}
@@ -48,23 +48,15 @@ export class RollDiceUseCase {
     }
 
     const value = await this.diceClient.roll();
-    const consecutiveSixes = value === 6 ? gameState.consecutiveSixes + 1 : 0;
-    const possibleMoves = this.possibleMoveCalculator.calculate(
-      gameState,
-      playerId,
-      value,
-    );
-    const hasMoves = possibleMoves.length > 0;
-    const turnForfeit = consecutiveSixes >= 3;
-    const rollAgain = value === 6 && !turnForfeit && hasMoves;
+    const result = this.ludoEngine.handleRoll(gameState, value);
 
     await this.sessionRepository.updateAfterDiceRoll(sessionId, {
       lastDiceValue: value,
-      diceRolledThisTurn: !turnForfeit,
-      consecutiveSixes,
+      diceRolledThisTurn: !result.turnForfeit,
+      consecutiveSixes: result.consecutiveSixes,
     });
 
-    if (!hasMoves || turnForfeit) {
+    if (!result.hasMoves || result.turnForfeit) {
       await this.sessionRepository.passTurn(sessionId, playerId);
     }
 
@@ -80,13 +72,13 @@ export class RollDiceUseCase {
     this.sessionEvents?.emit(sessionId, 'dice_rolled', {
       value,
       playerId,
-      hasMoves,
-      rollAgain,
-      consecutiveSixes,
-      turnForfeit,
+      hasMoves: result.hasMoves,
+      rollAgain: result.rollAgain,
+      consecutiveSixes: result.consecutiveSixes,
+      turnForfeit: result.turnForfeit,
     });
 
-    if (!hasMoves || turnForfeit) {
+    if (!result.hasMoves || result.turnForfeit) {
       this.sessionEvents?.emit(sessionId, 'turn_changed', {
         currentPlayerId: updatedGameState.currentPlayerId,
         turnNumber: updatedGameState.turnNumber,
@@ -96,11 +88,11 @@ export class RollDiceUseCase {
     return {
       value,
       playerId,
-      possibleMoves,
-      hasMoves,
-      rollAgain,
-      consecutiveSixes,
-      turnForfeit,
+      possibleMoves: result.possibleMoves,
+      hasMoves: result.hasMoves,
+      rollAgain: result.rollAgain,
+      consecutiveSixes: result.consecutiveSixes,
+      turnForfeit: result.turnForfeit,
       gameState: updatedGameState,
     };
   }

@@ -12,6 +12,15 @@ import type { Request, Response } from 'express';
 import { AuthService } from '../../application/auth.service';
 import { appConfig } from '../../../common/config/app.config';
 
+interface AuthenticatedUser {
+  keycloakSub: string;
+}
+
+interface AuthRequest extends Request {
+  user: AuthenticatedUser;
+  cookies: Record<string, string>;
+}
+
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -24,8 +33,8 @@ export class AuthController {
 
   @Get('oauth/callback')
   @UseGuards(AuthGuard('keycloak'))
-  callback(@Req() req: Request, @Res() res: Response): void {
-    res.cookie('session', (req.user as any).keycloakSub, {
+  callback(@Req() req: AuthRequest, @Res() res: Response): void {
+    res.cookie('session', req.user.keycloakSub, {
       httpOnly: true,
       secure: appConfig.node_env === 'production',
       sameSite: 'lax',
@@ -36,8 +45,8 @@ export class AuthController {
   }
 
   @Get('session')
-  async session(@Req() req: Request) {
-    const sub = req.cookies?.session;
+  async session(@Req() req: AuthRequest) {
+    const sub = req.cookies.session;
     if (!sub) throw new UnauthorizedException();
 
     const user = await this.authService.findByKeycloakSub(sub);
