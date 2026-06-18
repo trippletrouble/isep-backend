@@ -26,6 +26,18 @@ const GOAL_START_FIELDS = {
   YELLOW: 67,
 } as const;
 
+export const FINAL_GOAL_POSITIONS = {
+  RED: 72,
+  BLUE: 73,
+  YELLOW: 74,
+  GREEN: 75,
+} as const;
+
+export const isFinalGoalPosition = (position: number): boolean =>
+  Object.values(FINAL_GOAL_POSITIONS).includes(
+    position as (typeof FINAL_GOAL_POSITIONS)[keyof typeof FINAL_GOAL_POSITIONS],
+  );
+
 @Injectable()
 export class PossibleMoveCalculatorUseCase {
   calculate(
@@ -59,7 +71,7 @@ export class PossibleMoveCalculatorUseCase {
     allFigures: GameStateFigureType[],
     diceValue: number,
   ): PossibleMoveType | null {
-    if (figure.position === FINAL_GOAL_POSITION || figure.status === 'GOAL') {
+    if (isFinalGoalPosition(figure.position) || figure.status === 'GOAL') {
       return null;
     }
 
@@ -77,7 +89,7 @@ export class PossibleMoveCalculatorUseCase {
         other.playerId === player.id &&
         other.id !== figure.id &&
         other.position === toPosition &&
-        toPosition !== FINAL_GOAL_POSITION,
+        !isFinalGoalPosition(toPosition),
     );
 
     if (ownFigureOnTarget) {
@@ -107,6 +119,7 @@ export class PossibleMoveCalculatorUseCase {
   ): number | null {
     const startField = START_FIELDS[color];
     const goalStart = GOAL_START_FIELDS[color];
+    const finalGoalPosition = FINAL_GOAL_POSITIONS[color];
 
     if (fromPosition === -1) {
       return diceValue === 6 ? startField : null;
@@ -115,11 +128,6 @@ export class PossibleMoveCalculatorUseCase {
       const progressFromStart =
         (fromPosition - startField + MAIN_TRACK_SIZE) % MAIN_TRACK_SIZE;
       const nextProgress = progressFromStart + diceValue;
-
-      /*if (nextProgress <= MAIN_TRACK_END) {
-        return (startField + nextProgress) % MAIN_TRACK_SIZE;
-      }
-      const goalIndex = nextProgress - MAIN_TRACK_SIZE;*/
 
       if (nextProgress < GOAL_ENTRY_PROGRESS) {
         return (startField + nextProgress) % MAIN_TRACK_SIZE;
@@ -131,7 +139,7 @@ export class PossibleMoveCalculatorUseCase {
       }
 
       if (goalIndex === GOAL_LANE_SIZE) {
-        return FINAL_GOAL_POSITION;
+        return finalGoalPosition;
       }
 
       return null;
@@ -149,7 +157,7 @@ export class PossibleMoveCalculatorUseCase {
       }
 
       if (nextGoalIndex === GOAL_LANE_SIZE) {
-        return FINAL_GOAL_POSITION;
+        return finalGoalPosition;
       }
 
       return null;
