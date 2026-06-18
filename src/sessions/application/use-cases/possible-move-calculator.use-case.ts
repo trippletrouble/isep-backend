@@ -5,25 +5,25 @@ import { GameStateFigureType } from './types/game-state-figure.type';
 import { GameStateFromPlayerType } from './types/game-state-from-Player.type';
 import { PossibleMoveType } from './types/possible-move.type';
 
-export const FINAL_GOAL_POSITION = 56;
+export const FINAL_GOAL_POSITION = 72;
 const MAIN_TRACK_START = 0;
-const MAIN_TRACK_SIZE = 40;
+const MAIN_TRACK_SIZE = 52;
 const MAIN_TRACK_END = MAIN_TRACK_START + MAIN_TRACK_SIZE - 1;
-const GOAL_LANE_SIZE = 4;
+const GOAL_LANE_SIZE = 5;
 const LAST_GOAL_LANE_INDEX = GOAL_LANE_SIZE - 1;
-
+const GOAL_ENTRY_PROGRESS = MAIN_TRACK_SIZE - 1;
 const START_FIELDS = {
   RED: 0,
-  BLUE: 10,
-  GREEN: 20,
-  YELLOW: 30,
+  BLUE: 13,
+  GREEN: 26,
+  YELLOW: 39,
 } as const;
 
 const GOAL_START_FIELDS = {
-  RED: 40,
-  BLUE: 44,
-  GREEN: 48,
-  YELLOW: 52,
+  RED: 52,
+  BLUE: 57,
+  GREEN: 62,
+  YELLOW: 67,
 } as const;
 
 @Injectable()
@@ -116,11 +116,15 @@ export class PossibleMoveCalculatorUseCase {
         (fromPosition - startField + MAIN_TRACK_SIZE) % MAIN_TRACK_SIZE;
       const nextProgress = progressFromStart + diceValue;
 
-      if (nextProgress <= MAIN_TRACK_END) {
+      /*if (nextProgress <= MAIN_TRACK_END) {
         return (startField + nextProgress) % MAIN_TRACK_SIZE;
       }
+      const goalIndex = nextProgress - MAIN_TRACK_SIZE;*/
 
-      const goalIndex = nextProgress - MAIN_TRACK_SIZE;
+      if (nextProgress < GOAL_ENTRY_PROGRESS) {
+        return (startField + nextProgress) % MAIN_TRACK_SIZE;
+      }
+      const goalIndex = nextProgress - GOAL_ENTRY_PROGRESS;
 
       if (goalIndex <= LAST_GOAL_LANE_INDEX) {
         return goalStart + goalIndex;

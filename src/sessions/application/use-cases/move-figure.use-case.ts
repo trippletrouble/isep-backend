@@ -23,9 +23,9 @@ export class MoveFigureUseCase {
   constructor(
     @Inject(SessionRepositoryPort)
     private readonly sessionRepository: SessionRepositoryPort,
-    private readonly possibleMoveCalculator: PossibleMoveCalculatorUseCase,
-    @Optional()
-    private readonly sessionEvents?: SessionEventsService,
+      private readonly possibleMoveCalculator: PossibleMoveCalculatorUseCase,
+        @Optional()
+        private readonly sessionEvents?: SessionEventsService,
   ) {}
 
   async execute(
@@ -57,8 +57,8 @@ export class MoveFigureUseCase {
     );
     const selectedMove = possibleMoves.find(
       (move) =>
-        move.figureId === request.figureId &&
-        move.toPosition === request.toPosition,
+      move.figureId === request.figureId &&
+      move.toPosition === request.toPosition,
     );
 
     if (!selectedMove) {
@@ -66,21 +66,21 @@ export class MoveFigureUseCase {
     }
 
     const capturedFigure = selectedMove.capturesOpponent
-      ? gameState.figures.find(
-          (figure) =>
-            figure.playerId !== userId &&
-            figure.position === selectedMove.toPosition,
-        )
-      : undefined;
+    ? gameState.figures.find(
+      (figure) =>
+      figure.playerId !== userId &&
+      figure.position === selectedMove.toPosition,
+    )
+    : undefined;
     const outcome = this.determineOutcome(
       gameState.figures.filter((figure) => figure.playerId === userId),
-      selectedMove.figureId,
-      selectedMove.toPosition,
-      Boolean(capturedFigure),
+                                          selectedMove.figureId,
+                                          selectedMove.toPosition,
+                                          Boolean(capturedFigure),
     );
     const turnForfeit = gameState.consecutiveSixes >= 3;
     const rollAgain =
-      gameState.lastDiceValue === 6 && !turnForfeit && outcome !== 'GAME_WON';
+    gameState.lastDiceValue === 6 && !turnForfeit && outcome !== 'GAME_WON';
 
     await this.sessionRepository.applyMove({
       sessionId,
@@ -96,7 +96,7 @@ export class MoveFigureUseCase {
     });
 
     const updatedGameState =
-      await this.sessionRepository.findGameStateById(sessionId);
+    await this.sessionRepository.findGameStateById(sessionId);
 
     if (!updatedGameState) {
       throw new SessionNotFoundError();
@@ -108,6 +108,9 @@ export class MoveFigureUseCase {
       fromPosition: selectedMove.fromPosition,
       toPosition: selectedMove.toPosition,
     });
+
+    // Alle Clients mit vollem GameState versorgen — Figurenpositionen, diceRolledThisTurn etc.
+    this.sessionEvents?.emit(sessionId, 'game_state', updatedGameState);
 
     if (
       updatedGameState.currentPlayerId !== gameState.currentPlayerId ||
@@ -149,9 +152,9 @@ export class MoveFigureUseCase {
     }
     if (toPosition === FINAL_GOAL_POSITION) {
       const allFiguresInGoal = ownFigures.every((figure) =>
-        figure.id !== movedFigureId
-          ? figure.position === FINAL_GOAL_POSITION || figure.status === 'GOAL'
-          : true,
+      figure.id !== movedFigureId
+      ? figure.position === FINAL_GOAL_POSITION || figure.status === 'GOAL'
+      : true,
       );
 
       return allFiguresInGoal ? 'GAME_WON' : 'GOAL';

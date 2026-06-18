@@ -14,6 +14,8 @@ export class HttpDiceClientAdapter extends DiceClientPort {
     if (!baseUrl) {
       // Für lokale Entwicklung als Fallback.
       // Wenn der Würfelservice zwingend sein soll, stattdessen Error werfen.
+      const vals = [1,2,3,4,5,6];
+      return vals[Math.floor(Math.random() * 6)];
       return Math.floor(Math.random() * 6) + 1;
     }
 

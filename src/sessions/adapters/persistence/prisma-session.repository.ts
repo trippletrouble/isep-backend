@@ -10,6 +10,7 @@ import { Prisma } from 'src/generated/prisma-client/client';
 import { GameParticipant } from '../../../generated/prisma-class/game_participant';
 import { ApplyMoveData } from '../../application/use-cases/types/apply-move-data.type';
 import { GameHistoryEventDto } from '../../application/dtos/game-history-event.dto';
+import { FINAL_GOAL_POSITION } from 'src/sessions/application/use-cases/possible-move-calculator.use-case';
 
 @Injectable()
 export class PrismaSessionRepository implements SessionRepositoryPort {
@@ -254,7 +255,7 @@ export class PrismaSessionRepository implements SessionRepositoryPort {
         throw new Error('Figure not found');
       }
 
-      const status = data.toPosition === 56 ? 'GOAL' : 'ACTIVE';
+      const status = data.toPosition === FINAL_GOAL_POSITION ? 'GOAL' : 'ACTIVE';
 
       await tx.figure.update({
         where: {
