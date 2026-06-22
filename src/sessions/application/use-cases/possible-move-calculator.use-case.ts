@@ -15,15 +15,15 @@ const GOAL_ENTRY_PROGRESS = MAIN_TRACK_SIZE - 1;
 const START_FIELDS = {
   RED: 0,
   BLUE: 13,
-  GREEN: 26,
-  YELLOW: 39,
+  YELLOW: 26,
+  GREEN: 39,
 } as const;
 
 const GOAL_START_FIELDS = {
   RED: 52,
   BLUE: 57,
-  GREEN: 62,
-  YELLOW: 67,
+  YELLOW: 62,
+  GREEN: 67,
 } as const;
 
 export const FINAL_GOAL_POSITIONS = {
