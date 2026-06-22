@@ -12,27 +12,25 @@ export class HttpDiceClientAdapter extends DiceClientPort {
     const baseUrl = this.config.get<string>('DICE_SERVICE_URL');
 
     if (!baseUrl) {
-      // Für lokale Entwicklung als Fallback.
-      // Wenn der Würfelservice zwingend sein soll, stattdessen Error werfen.
       const vals = [1,2,3,4,5,6];
       return vals[Math.floor(Math.random() * 6)];
       return Math.floor(Math.random() * 6) + 1;
     }
 
-    const response = await fetch(`${baseUrl}/roll`, {
-      method: 'POST',
+    const response = await fetch(`${baseUrl}/roll/6`, {
+      method: 'GET',
     });
 
     if (!response.ok) {
       throw new Error('Dice service request failed');
     }
 
-    const body = (await response.json()) as { value?: number };
+    const body = (await response.json()) as { sides?: number; result?: number };
 
-    if (!body.value || body.value < 1 || body.value > 6) {
+    if (!body.result || body.result < 1 || body.result > 6) {
       throw new Error('Dice service returned invalid value');
     }
 
-    return body.value;
+    return body.result;
   }
 }
