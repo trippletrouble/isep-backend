@@ -19,7 +19,6 @@ import {
 } from '@nestjs/common';
 import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
 import { Observable } from 'rxjs';
-
 import {
   CreateSessionUseCase,
   ListOpenSessionsUseCase,
@@ -35,28 +34,19 @@ import {
   PlayerResponseDto,
   GetResultsUseCase,
   GameResultDto,
-} from '../../application';
-import { CreateSessionRequestDto } from '../../application';
-import { SessionGuard } from '../../../auth/guards/session.guard';
-import { CurrentUser } from '../../../auth/decorators/current-user.decorator';
-import { User } from '../../../generated/prisma-class/user';
-import { StartSessionUseCase } from '../../application';
-import { GetGameStateUseCase } from '../../application/use-cases/get-game-state.use-case';
-import { GameStateType } from '../../application/use-cases/types/game-state.type';
-import { DiceRollResultType } from '../../application/use-cases/types/dice-roll-result.type';
-import { RollDiceRequestType } from '../../application/use-cases/types/dice-roll-request.type';
-import { RollDiceUseCase } from '../../application/use-cases/roll-dice.use-case';
-import { MoveFigureRequestDto } from '../../application';
-import { MoveFigureUseCase } from '../../application';
-import { GetPossibleMovesUseCase } from '../../application';
-import { GetLobbyUseCase } from '../../application';
-import { UpdateLobbySettingsUseCase } from '../../application';
-import { LobbyDto } from '../../application';
-import { GetHistoryUseCase, GameHistoryEventDto } from '../../application';
-
-import { LobbySettingsDto } from '../../application/dtos/lobby-settings.dto';
-import { PossibleMovesResultType } from '../../application/use-cases/types/possible-moves-result.type';
-import {
+  CreateSessionRequestDto,
+  StartSessionUseCase,
+  GetGameStateUseCase,
+  RollDiceUseCase,
+  MoveFigureRequestDto,
+  MoveFigureUseCase,
+  GetPossibleMovesUseCase,
+  GetLobbyUseCase,
+  UpdateLobbySettingsUseCase,
+  GetHistoryUseCase,
+  GameHistoryEventDto,
+  LobbyDto,
+  LobbySettingsDto,
   DiceAlreadyRolledError,
   DiceNotRolledError,
   InvalidSessionStatusError,
@@ -71,12 +61,16 @@ import {
   OnlyHostCanInviteError,
   InviteTokenExpiredError,
   ParticipantNotFoundError,
-} from '../../application/use-cases/errors';
-import { MoveFigureResultType } from '../../application/use-cases/types/move-figure-result.type';
+  GameStateType,
+  DiceRollResultType,
+  RollDiceRequestType,
+  PossibleMovesResultType,
+  MoveFigureResultType,
+} from '../../application';
+import { SessionGuard, CurrentUser } from '../../../auth';
+import { User } from '$gen/prisma-class/user';
 import { SessionSseService } from '../../session-sse.service';
-import { AuthService } from '../../../auth/application/auth.service';
 import { ApiQuery } from '@nestjs/swagger';
-import { SuccessResponse } from '../../../common/interfaces/api-response.interface';
 
 @Controller('sessions')
 export class SessionsController {
@@ -86,7 +80,6 @@ export class SessionsController {
     private readonly getGameStateUseCase: GetGameStateUseCase,
     private readonly leaveSessionUseCase: LeaveSessionUseCase,
     private readonly reconnectUseCase: ReconnectUseCase,
-    private readonly authService: AuthService,
     private readonly rollDiceUseCase: RollDiceUseCase,
     private readonly moveFigureUseCase: MoveFigureUseCase,
     private readonly startSessionUseCase: StartSessionUseCase,

@@ -1,5 +1,5 @@
 import { IsOptional, IsEnum, IsString } from 'class-validator';
-import { PlayerColor } from '../../../generated/prisma-client/enums';
+import { PlayerColor } from '$gen/prisma-client/enums';
 
 export class JoinSessionRequestDto {
   @IsOptional()

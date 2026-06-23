@@ -1,18 +1,6 @@
-import { User } from '../../generated/prisma-class/user';
-import { UserRole } from '../../generated/prisma-client/enums';
-
-export interface CreateUserDto {
-  keycloakSub: string;
-  username: string;
-  avatarUrl?: string | null;
-  role?: UserRole;
-}
-
-export type FinishedParticipationStats = {
-  sessionId: string;
-  winnerId: string | null;
-  figuresCaptured: number;
-};
+import { User } from '$gen/prisma-class/user';
+import { FinishedParticipationStats } from '../util';
+import { CreateUserDto } from '../util';
 
 export abstract class UserRepositoryPort {
   abstract findById(id: string): Promise<User | null>;

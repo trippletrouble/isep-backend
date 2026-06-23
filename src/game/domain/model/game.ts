@@ -1,4 +1,4 @@
-export type GameStatus = 'WAITING' | 'IN_PROGRESS' | 'FINISHED';
+import { GameStatus } from '../../util';
 
 export class Game {
   constructor(

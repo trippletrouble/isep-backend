@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { PlayerColor, PieceStatus } from '../../../generated/prisma-client/client';
-import { GameStateType } from '../../application/use-cases/types/game-state.type';
-import { PossibleMoveType } from '../../application/use-cases/types/possible-move.type';
-import { MoveOutcomeType } from '../../application/use-cases/types/move-figure-result.type';
+import {
+  PlayerColor,
+  PieceStatus,
+} from '../../../generated/prisma-client/client';
+import { GameStateType, PossibleMoveType } from '../../application';
+import { MoveOutcomeType } from '@common';
 
 export const TURN_ORDER: PlayerColor[] = [
   PlayerColor.RED,
@@ -47,8 +49,16 @@ export interface MoveResult {
 
 export interface ILudoEngine {
   handleRoll(session: GameStateType, diceValue: number): DiceRollResult;
-  getPossibleMoves(session: GameStateType, playerId: string, diceValue: number): PossibleMoveType[];
-  applyMove(session: GameStateType, figureId: number, diceValue: number): MoveResult;
+  getPossibleMoves(
+    session: GameStateType,
+    playerId: string,
+    diceValue: number,
+  ): PossibleMoveType[];
+  applyMove(
+    session: GameStateType,
+    figureId: number,
+    diceValue: number,
+  ): MoveResult;
   findNextPlayer(session: GameStateType): string;
 }
 
@@ -59,7 +69,10 @@ export class LudoEngine implements ILudoEngine {
    * @param color The player's color
    * @param playerPosition The player-relative position
    */
-  private toAbsolutePosition(color: PlayerColor, playerPosition: number): number {
+  private toAbsolutePosition(
+    color: PlayerColor,
+    playerPosition: number,
+  ): number {
     return (COLOR_OFFSET[color] + playerPosition) % COMMON_TRACK_SIZE;
   }
 
@@ -93,7 +106,9 @@ export class LudoEngine implements ILudoEngine {
    * @param session The current game state
    */
   public findNextPlayer(session: GameStateType): string {
-    const currentParticipant = session.players.find(p => p.id === session.currentPlayerId);
+    const currentParticipant = session.players.find(
+      (p) => p.id === session.currentPlayerId,
+    );
     if (!currentParticipant) {
       throw new Error('Current player not found in session');
     }
@@ -103,7 +118,7 @@ export class LudoEngine implements ILudoEngine {
 
     for (let i = 1; i <= 4; i++) {
       const nextColor = TURN_ORDER[(startIndex + i) % 4];
-      const nextPlayer = session.players.find(p => p.color === nextColor);
+      const nextPlayer = session.players.find((p) => p.color === nextColor);
       if (nextPlayer && !nextPlayer.hasFinished) {
         return nextPlayer.id;
       }
@@ -118,21 +133,24 @@ export class LudoEngine implements ILudoEngine {
    */
   public handleRoll(session: GameStateType, diceValue: number): DiceRollResult {
     const consecutiveSixes = diceValue === 6 ? session.consecutiveSixes + 1 : 0;
-    
+
     // Check if the player forfeits their turn because of rolling three consecutive sixes
-    const turnForfeit = session.activeRules.includes('THREE_SIXES_LOSE_TURN') && consecutiveSixes >= 3;
-    
-    const possibleMoves = turnForfeit 
-      ? [] 
+    const turnForfeit =
+      session.activeRules.includes('THREE_SIXES_LOSE_TURN') &&
+      consecutiveSixes >= 3;
+
+    const possibleMoves = turnForfeit
+      ? []
       : this.getPossibleMoves(session, session.currentPlayerId!, diceValue);
-      
+
     const hasMoves = possibleMoves.length > 0;
-    
+
     // Player rolls again if they got a 6, the rule is active, they didn't forfeit, and they actually have moves to play
-    const rollAgain = diceValue === 6 && 
-                      session.activeRules.includes('THROW_AGAIN_ON_6') && 
-                      !turnForfeit && 
-                      hasMoves;
+    const rollAgain =
+      diceValue === 6 &&
+      session.activeRules.includes('THROW_AGAIN_ON_6') &&
+      !turnForfeit &&
+      hasMoves;
 
     return {
       consecutiveSixes: turnForfeit ? 0 : consecutiveSixes,
@@ -155,17 +173,21 @@ export class LudoEngine implements ILudoEngine {
     playerId: string,
     diceValue: number,
   ): PossibleMoveType[] {
-    const player = session.players.find(p => p.id === playerId);
+    const player = session.players.find((p) => p.id === playerId);
     if (!player) {
       return [];
     }
 
     const playerColor = player.color;
-    const ownFigures = session.figures.filter(f => f.playerId === playerId);
+    const ownFigures = session.figures.filter((f) => f.playerId === playerId);
     const moves: PossibleMoveType[] = [];
 
     for (const figure of ownFigures) {
-      const targetPos = this.calculateTargetPosition(figure.position, diceValue, playerColor);
+      const targetPos = this.calculateTargetPosition(
+        figure.position,
+        diceValue,
+        playerColor,
+      );
       if (targetPos === null) {
         continue;
       }
@@ -173,7 +195,10 @@ export class LudoEngine implements ILudoEngine {
       // Check self-blockade: cannot land on the same position as another own figure
       // (except for the goal field 56, where multiple figures can reside)
       const isSelfBlocked = ownFigures.some(
-        f => f.id !== figure.id && f.position === targetPos && targetPos !== GOAL_POSITION
+        (f) =>
+          f.id !== figure.id &&
+          f.position === targetPos &&
+          targetPos !== GOAL_POSITION,
       );
       if (isSelfBlocked) {
         continue;
@@ -182,14 +207,27 @@ export class LudoEngine implements ILudoEngine {
       // Check capture potential (only applicable on the Common Track 0-50)
       let capturesOpponent = false;
       if (targetPos >= START_POSITION && targetPos <= COMMON_TRACK_END) {
-        const myAbsoluteTarget = this.toAbsolutePosition(playerColor, targetPos);
-        const opponentFigures = session.figures.filter(f => f.playerId !== playerId);
+        const myAbsoluteTarget = this.toAbsolutePosition(
+          playerColor,
+          targetPos,
+        );
+        const opponentFigures = session.figures.filter(
+          (f) => f.playerId !== playerId,
+        );
 
-        capturesOpponent = opponentFigures.some(oppFig => {
-          if (oppFig.position >= START_POSITION && oppFig.position <= COMMON_TRACK_END) {
-            const oppPlayer = session.players.find(p => p.id === oppFig.playerId);
+        capturesOpponent = opponentFigures.some((oppFig) => {
+          if (
+            oppFig.position >= START_POSITION &&
+            oppFig.position <= COMMON_TRACK_END
+          ) {
+            const oppPlayer = session.players.find(
+              (p) => p.id === oppFig.playerId,
+            );
             if (oppPlayer) {
-              const oppAbsolute = this.toAbsolutePosition(oppPlayer.color, oppFig.position);
+              const oppAbsolute = this.toAbsolutePosition(
+                oppPlayer.color,
+                oppFig.position,
+              );
               return oppAbsolute === myAbsoluteTarget;
             }
           }
@@ -215,26 +253,34 @@ export class LudoEngine implements ILudoEngine {
    * @param figureId The ID of the figure to move
    * @param diceValue The dice value used for the move
    */
-  public applyMove(session: GameStateType, figureId: number, diceValue: number): MoveResult {
+  public applyMove(
+    session: GameStateType,
+    figureId: number,
+    diceValue: number,
+  ): MoveResult {
     const playerId = session.currentPlayerId;
     if (!playerId) {
       throw new Error('No current player is active in the session');
     }
 
-    const player = session.players.find(p => p.id === playerId);
+    const player = session.players.find((p) => p.id === playerId);
     if (!player) {
       throw new Error('Current player not found in session');
     }
 
     // Find the moving figure
-    const figure = session.figures.find(f => f.id === figureId && f.playerId === playerId);
+    const figure = session.figures.find(
+      (f) => f.id === figureId && f.playerId === playerId,
+    );
     if (!figure) {
-      throw new Error('Figure not found or does not belong to the current player');
+      throw new Error(
+        'Figure not found or does not belong to the current player',
+      );
     }
 
     // Get legal moves to validate the move
     const possibleMoves = this.getPossibleMoves(session, playerId, diceValue);
-    const selectedMove = possibleMoves.find(m => m.figureId === figureId);
+    const selectedMove = possibleMoves.find((m) => m.figureId === figureId);
     if (!selectedMove) {
       throw new Error('Invalid move');
     }
@@ -242,14 +288,27 @@ export class LudoEngine implements ILudoEngine {
     // Determine the captured opponent figure if applicable
     let capturedFigureId: number | null = null;
     if (selectedMove.capturesOpponent) {
-      const myAbsoluteTarget = this.toAbsolutePosition(player.color, selectedMove.toPosition);
-      const opponentFigures = session.figures.filter(f => f.playerId !== playerId);
-      
-      const oppFigure = opponentFigures.find(oppFig => {
-        if (oppFig.position >= START_POSITION && oppFig.position <= COMMON_TRACK_END) {
-          const oppPlayer = session.players.find(p => p.id === oppFig.playerId);
+      const myAbsoluteTarget = this.toAbsolutePosition(
+        player.color,
+        selectedMove.toPosition,
+      );
+      const opponentFigures = session.figures.filter(
+        (f) => f.playerId !== playerId,
+      );
+
+      const oppFigure = opponentFigures.find((oppFig) => {
+        if (
+          oppFig.position >= START_POSITION &&
+          oppFig.position <= COMMON_TRACK_END
+        ) {
+          const oppPlayer = session.players.find(
+            (p) => p.id === oppFig.playerId,
+          );
           if (oppPlayer) {
-            return this.toAbsolutePosition(oppPlayer.color, oppFig.position) === myAbsoluteTarget;
+            return (
+              this.toAbsolutePosition(oppPlayer.color, oppFig.position) ===
+              myAbsoluteTarget
+            );
           }
         }
         return false;
@@ -264,18 +323,18 @@ export class LudoEngine implements ILudoEngine {
     if (selectedMove.capturesOpponent) {
       outcome = 'CAPTURED';
     } else if (selectedMove.toPosition === GOAL_POSITION) {
-      const ownFigures = session.figures.filter(f => f.playerId === playerId);
-      const allInGoal = ownFigures.every(f => 
-        f.id === figureId ? true : f.position === GOAL_POSITION
+      const ownFigures = session.figures.filter((f) => f.playerId === playerId);
+      const allInGoal = ownFigures.every((f) =>
+        f.id === figureId ? true : f.position === GOAL_POSITION,
       );
       outcome = allInGoal ? 'GAME_WON' : 'GOAL';
     }
 
     // Turn Succession: roll again on 6 (if rule active) or on capturing an opponent
-    const rollAgain = outcome !== 'GAME_WON' && (
-      selectedMove.capturesOpponent || 
-      (diceValue === 6 && session.activeRules.includes('THROW_AGAIN_ON_6'))
-    );
+    const rollAgain =
+      outcome !== 'GAME_WON' &&
+      (selectedMove.capturesOpponent ||
+        (diceValue === 6 && session.activeRules.includes('THROW_AGAIN_ON_6')));
 
     return {
       figureId,

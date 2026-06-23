@@ -1,7 +1,13 @@
-import { Injectable, Inject, NotFoundException, ForbiddenException, MessageEvent } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  NotFoundException,
+  ForbiddenException,
+  MessageEvent,
+} from '@nestjs/common';
 import { Subject, Observable } from 'rxjs';
 import { SessionRepositoryPort } from './ports';
-import { GameStateType } from './application/use-cases/types/game-state.type';
+import { GameStateType } from './application';
 
 @Injectable()
 export class SessionSseService {

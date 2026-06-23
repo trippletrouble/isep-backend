@@ -1,17 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import {
-  CreateUserDto,
-  UserRepositoryPort,
-} from '../ports/user-repository.port';
-import { User } from '../../generated/prisma-class/user';
-import { UserRole } from '../../generated/prisma-client/enums';
-
-export interface OidcProfile {
-  sub: string;
-  username: string;
-  avatarUrl?: string | null;
-  role?: UserRole;
-}
+import { UserRepositoryPort } from '../ports';
+import { User } from '$gen/prisma-class/user';
+import { CreateUserDto, OidcProfile } from '../util';
 
 @Injectable()
 export class AuthService {

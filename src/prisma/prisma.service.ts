@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import { PrismaClient } from '../generated/prisma-client/client';
+import { PrismaClient } from '$gen/prisma-client/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 
 @Injectable()

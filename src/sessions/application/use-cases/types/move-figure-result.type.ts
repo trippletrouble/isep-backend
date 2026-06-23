@@ -1,6 +1,5 @@
 import { GameStateType } from './game-state.type';
-
-export type MoveOutcomeType = 'MOVED' | 'CAPTURED' | 'GOAL' | 'GAME_WON';
+import { MoveOutcomeType } from '@common';
 
 export type MoveFigureResultType = {
   figureId: number;

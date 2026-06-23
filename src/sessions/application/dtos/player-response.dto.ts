@@ -1,5 +1,5 @@
-import { PlayerColor, PlayerType } from 'src/generated/prisma-client/client';
-import { GameParticipant } from '../../../generated/prisma-class/game_participant';
+import { PlayerColor, PlayerType } from '$gen/prisma-client/client';
+import { GameParticipant } from '$gen/prisma-class/game_participant';
 
 export class PlayerResponseDto {
   id: string;

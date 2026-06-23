@@ -7,7 +7,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { Response } from 'express';
-import { ErrorResponse } from '../interfaces/api-response.interface';
+import { ErrorResponse } from '../util';
 
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
@@ -21,18 +21,21 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
-      const exceptionResponse = exception.getResponse();
+      const exceptionResponse: string | object = exception.getResponse();
 
       if (
         exception instanceof BadRequestException &&
         typeof exceptionResponse === 'object'
       ) {
-        const validationErrors = (exceptionResponse as any).message;
+        const validationErrors = (exceptionResponse as Record<string, unknown>)
+          .message;
         if (Array.isArray(validationErrors) && validationErrors.length > 0) {
           message = validationErrors.join(', ');
           code = 'VALIDATION_ERROR';
         } else {
-          message = (exceptionResponse as any).message || message;
+          message =
+            ((exceptionResponse as Record<string, unknown>)
+              .message as string) || message;
           code = this.mapStatusToCode(status);
         }
       } else {
@@ -43,9 +46,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
           typeof exceptionResponse === 'object' &&
           exceptionResponse !== null
         ) {
-          message = (exceptionResponse as any).message || message;
+          message =
+            ((exceptionResponse as Record<string, unknown>)
+              .message as string) || message;
           code =
-            (exceptionResponse as any).code || this.mapStatusToCode(status);
+            ((exceptionResponse as Record<string, unknown>).code as string) ||
+            this.mapStatusToCode(status);
         }
       }
     }

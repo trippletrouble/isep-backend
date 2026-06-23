@@ -1,7 +1,7 @@
 import {
   GameHistoryActionType,
   MoveOutcome,
-} from '../../../generated/prisma-client/enums';
+} from '$gen/prisma-client/enums';
 
 export class GameHistoryEventDto {
   id: number;

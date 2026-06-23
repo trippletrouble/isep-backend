@@ -1,4 +1,4 @@
-import { Game } from '../domain/model/game';
+import { Game } from '../domain';
 
 export interface GameRepositoryPort {
   save(game: Game): Promise<Game>;

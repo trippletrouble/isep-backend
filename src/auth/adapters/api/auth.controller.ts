@@ -8,18 +8,10 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import type { Request, Response } from 'express';
-import { AuthService } from '../../application/auth.service';
-import { appConfig } from '../../../common/config/app.config';
-
-interface AuthenticatedUser {
-  keycloakSub: string;
-}
-
-interface AuthRequest extends Request {
-  user: AuthenticatedUser;
-  cookies: Record<string, string>;
-}
+import type { Response } from 'express';
+import { AuthService } from '../../application';
+import { appConfig } from '@common';
+import { AuthRequest } from '../../util';
 
 @Controller('auth')
 export class AuthController {

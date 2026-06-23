@@ -5,7 +5,7 @@ import {
   Param,
   NotFoundException,
 } from '@nestjs/common';
-import { GameService } from '../../application/game.service';
+import { GameService } from '../../application';
 import { GameResponseDto } from './game.response.dto';
 
 @Controller('games')

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { DiceClientPort } from '../../ports/dice-client.port';
+import { DiceClientPort } from '../../ports';
+import { appConfig } from '@common';
 
 @Injectable()
 export class HttpDiceClientAdapter extends DiceClientPort {
@@ -9,12 +10,11 @@ export class HttpDiceClientAdapter extends DiceClientPort {
   }
 
   async roll(): Promise<number> {
-    const baseUrl = this.config.get<string>('DICE_SERVICE_URL');
+    const baseUrl = appConfig.dice_service_url;
 
     if (!baseUrl) {
-      const vals = [1,2,3,4,5,6];
+      const vals = [1, 2, 3, 4, 5, 6];
       return vals[Math.floor(Math.random() * 6)];
-      return Math.floor(Math.random() * 6) + 1;
     }
 
     const response = await fetch(`${baseUrl}/roll/6`, {

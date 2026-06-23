@@ -1,5 +1,5 @@
-import { Session } from '../../../../generated/prisma-class/session';
-import { GameParticipant } from '../../../../generated/prisma-class/game_participant';
+import { Session } from '$gen/prisma-class/session';
+import { GameParticipant } from '$gen/prisma-class/game_participant';
 
 export type SessionWithParticipants = Session & {
   participants: GameParticipant[];
