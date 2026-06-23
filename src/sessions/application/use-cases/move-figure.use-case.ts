@@ -1,11 +1,13 @@
+import { MoveFigureRequestDto } from '../dtos';
 import { Inject, Injectable, Optional } from '@nestjs/common';
-import { MoveFigureRequestDto } from '../dtos/move-figure-request.dto';
 import { SessionRepositoryPort } from '../../ports';
 import {
   FINAL_GOAL_POSITION,
   PossibleMoveCalculatorUseCase,
   isFinalGoalPosition,
 } from './possible-move-calculator.use-case';
+import { LudoEngine, MoveResult } from '../../domain';
+import { GameStateCacheService } from '../services/game-state-cache.service';
 import {
   DiceNotRolledError,
   InvalidMoveError,
@@ -13,10 +15,7 @@ import {
   NotYourTurnError,
   SessionNotFoundError,
 } from './errors';
-import {
-  MoveFigureResultType,
-  MoveOutcomeType,
-} from './types/move-figure-result.type';
+import { MoveFigureResultType, MoveOutcomeType } from './types/move-figure-result.type';
 import { SessionEventsService } from '../services';
 
 @Injectable()
@@ -24,10 +23,12 @@ export class MoveFigureUseCase {
   constructor(
     @Inject(SessionRepositoryPort)
     private readonly sessionRepository: SessionRepositoryPort,
+    private readonly cache: GameStateCacheService,
+    private readonly ludoEngine: LudoEngine,
     private readonly possibleMoveCalculator: PossibleMoveCalculatorUseCase,
     @Optional()
     private readonly sessionEvents?: SessionEventsService,
-  ) { }
+  ) {}
 
   async execute(
     sessionId: string,
@@ -66,6 +67,20 @@ export class MoveFigureUseCase {
       throw new InvalidMoveError();
     }
 
+    let result: MoveResult;
+    try {
+      result = this.ludoEngine.applyMove(
+        gameState,
+        request.figureId,
+        gameState.lastDiceValue,
+      );
+    } catch {
+      throw new InvalidMoveError();
+    }
+    if (result.toPosition !== request.toPosition) {
+      throw new InvalidMoveError();
+    }
+
     const capturedFigure = selectedMove.capturesOpponent
       ? gameState.figures.find(
         (figure) =>
@@ -86,14 +101,14 @@ export class MoveFigureUseCase {
     await this.sessionRepository.applyMove({
       sessionId,
       userId,
-      figureId: selectedMove.figureId,
-      fromPosition: selectedMove.fromPosition,
-      toPosition: selectedMove.toPosition,
+      figureId: result.figureId,
+      fromPosition: result.fromPosition,
+      toPosition: result.toPosition,
       diceValue: gameState.lastDiceValue,
-      capturedFigureId: capturedFigure?.id ?? null,
-      outcome,
-      rollAgain,
-      turnForfeit,
+      capturedFigureId: result.capturedFigureId,
+      outcome: result.outcome,
+      rollAgain: result.rollAgain,
+      turnForfeit: result.turnForfeit,
     });
 
     const updatedGameState =
@@ -103,11 +118,13 @@ export class MoveFigureUseCase {
       throw new SessionNotFoundError();
     }
 
+    this.cache.set(sessionId, updatedGameState).catch(() => {});
+
     this.sessionEvents?.emit(sessionId, 'move_executed', {
-      outcome,
-      figureId: selectedMove.figureId,
-      fromPosition: selectedMove.fromPosition,
-      toPosition: selectedMove.toPosition,
+      outcome: result.outcome,
+      figureId: result.figureId,
+      fromPosition: result.fromPosition,
+      toPosition: result.toPosition,
     });
 
     // Alle Clients mit vollem GameState versorgen — Figurenpositionen, diceRolledThisTurn etc.
@@ -123,7 +140,7 @@ export class MoveFigureUseCase {
       });
     }
 
-    if (outcome === 'GAME_WON') {
+    if (result.outcome === 'GAME_WON') {
       this.sessionEvents?.emit(sessionId, 'game_ended', {
         winnerId: updatedGameState.winnerId,
         finishedAt: updatedGameState.lastUpdatedAt,
@@ -131,13 +148,13 @@ export class MoveFigureUseCase {
     }
 
     return {
-      figureId: selectedMove.figureId,
-      fromPosition: selectedMove.fromPosition,
-      toPosition: selectedMove.toPosition,
-      outcome,
-      capturedFigureId: capturedFigure?.id ?? null,
-      rollAgain,
-      turnForfeit,
+      figureId: result.figureId,
+      fromPosition: result.fromPosition,
+      toPosition: result.toPosition,
+      outcome: result.outcome,
+      capturedFigureId: result.capturedFigureId,
+      rollAgain: result.rollAgain,
+      turnForfeit: result.turnForfeit,
       gameState: updatedGameState,
     };
   }

@@ -1,5 +1,6 @@
 import { Inject, Injectable, Optional } from '@nestjs/common';
 import { SessionRepositoryPort } from '../../ports';
+import { GameStateCacheService } from '../services/game-state-cache.service';
 import {
   InvalidSessionStatusError,
   NotHostError,
@@ -12,6 +13,7 @@ export class DeleteSessionUseCase {
   constructor(
     @Inject(SessionRepositoryPort)
     private readonly sessionRepo: SessionRepositoryPort,
+    private readonly cache: GameStateCacheService,
     @Optional()
     private readonly sessionEvents?: SessionEventsService,
   ) {}
@@ -24,6 +26,8 @@ export class DeleteSessionUseCase {
     if (session.status !== 'WAITING') throw new InvalidSessionStatusError();
 
     await this.sessionRepo.deleteSessionById(sessionId);
+
+    this.cache.invalidate(sessionId).catch(() => {});
     this.sessionEvents?.removeStream(sessionId);
   }
 }

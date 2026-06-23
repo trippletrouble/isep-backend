@@ -5,9 +5,17 @@ import { GameModule } from './game/game.module';
 import { AuthModule } from './auth/auth.module';
 import { SessionModule } from './sessions';
 import { UsersModule } from './users/users.module';
+import { RedisModule } from './redis/redis.module';
 
 @Module({
-  imports: [PrismaModule, GameModule, AuthModule, SessionModule, UsersModule],
+  imports: [
+    PrismaModule,
+    GameModule,
+    AuthModule,
+    SessionModule,
+    UsersModule,
+    RedisModule,
+  ],
   controllers: [TestController],
   providers: [],
 })

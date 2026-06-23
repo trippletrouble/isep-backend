@@ -1,10 +1,12 @@
 import { LeaveSessionUseCase } from './leave-session.use-case';
 import { SessionRepositoryPort } from '../../ports';
+import { GameStateCacheService } from '../services/game-state-cache.service';
 import { SessionNotFoundError, ParticipantNotFoundError } from './errors';
 
 describe('LeaveSessionUseCase', () => {
   let useCase: LeaveSessionUseCase;
   let mockSessionRepo: jest.Mocked<SessionRepositoryPort>;
+  let mockCache: jest.Mocked<GameStateCacheService>;
 
   beforeEach(() => {
     mockSessionRepo = {
@@ -22,7 +24,11 @@ describe('LeaveSessionUseCase', () => {
       findOpenPublicSessions: jest.fn(),
     } as any;
 
-    useCase = new LeaveSessionUseCase(mockSessionRepo);
+    mockCache = {
+      invalidate: jest.fn().mockResolvedValue(undefined),
+    } as any;
+
+    useCase = new LeaveSessionUseCase(mockSessionRepo, mockCache);
     jest.useFakeTimers();
   });
 
@@ -73,6 +79,7 @@ describe('LeaveSessionUseCase', () => {
       );
       expect(mockSessionRepo.deleteSession).toHaveBeenCalledWith('session-id');
       expect(mockSessionRepo.updateSessionById).not.toHaveBeenCalled();
+      expect(mockCache.invalidate).toHaveBeenCalledWith('session-id');
     });
 
     it('should remove participant and transfer host role to oldest remaining participant if host leaves', async () => {
@@ -104,6 +111,7 @@ describe('LeaveSessionUseCase', () => {
         'session-id',
         { hostId: 'user-2' },
       );
+      expect(mockCache.invalidate).toHaveBeenCalledWith('session-id');
     });
 
     it('should remove participant and NOT transfer host role if non-host leaves', async () => {
@@ -127,6 +135,7 @@ describe('LeaveSessionUseCase', () => {
       );
       expect(mockSessionRepo.deleteSession).not.toHaveBeenCalled();
       expect(mockSessionRepo.updateSessionById).not.toHaveBeenCalled();
+      expect(mockCache.invalidate).toHaveBeenCalledWith('session-id');
     });
   });
 
@@ -188,6 +197,7 @@ describe('LeaveSessionUseCase', () => {
         { hostId: 'user-2' },
       );
       expect(mockSessionRepo.deleteSession).not.toHaveBeenCalled();
+      expect(mockCache.invalidate).toHaveBeenCalledWith('session-id');
     });
 
     it('should delete session if no participants are left when timer fires', async () => {
@@ -208,6 +218,7 @@ describe('LeaveSessionUseCase', () => {
 
       expect(mockSessionRepo.deleteSession).toHaveBeenCalledWith('session-id');
       expect(mockSessionRepo.removeParticipant).not.toHaveBeenCalled();
+      expect(mockCache.invalidate).toHaveBeenCalledWith('session-id');
     });
 
     it('should NOT clean up participant if reconnect cancels the timeout', async () => {

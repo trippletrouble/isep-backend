@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { SessionRepositoryPort } from '../../ports';
 import { LobbySettings } from '../../domain';
 import { LobbySettingsDto } from '../dtos/lobby-settings.dto';
+import { GameStateCacheService } from '../services/game-state-cache.service';
 import {
   InvalidSessionStatusError,
   NotHostError,
@@ -13,6 +14,7 @@ export class UpdateLobbySettingsUseCase {
   constructor(
     @Inject(SessionRepositoryPort)
     private readonly sessionRepo: SessionRepositoryPort,
+    private readonly cache: GameStateCacheService,
   ) {}
 
   async execute(
@@ -45,6 +47,8 @@ export class UpdateLobbySettingsUseCase {
       turnTimeLimitSeconds: lobbySettings.turnTimeLimitSeconds,
       additionalRules: lobbySettings.additionalRules,
     });
+
+    this.cache.invalidate(sessionId).catch(() => {});
 
     return new LobbySettingsDto(
       updated.numberOfPlayers,

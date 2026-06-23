@@ -6,6 +6,17 @@ import { User } from '../../generated/prisma-class/user';
 import { UserRole } from '../../generated/prisma-client/enums';
 import { appConfig } from '../../common/config/app.config';
 
+interface KeycloakRealmAccess {
+  roles: string[];
+}
+
+interface KeycloakUserinfo {
+  sub: string;
+  preferred_username: string;
+  picture?: string | null;
+  realm_access?: KeycloakRealmAccess | null;
+}
+
 @Injectable()
 export class KeycloakStrategy extends PassportStrategy(Strategy, 'keycloak') {
   private readonly userinfoUrl: string;
@@ -35,7 +46,7 @@ export class KeycloakStrategy extends PassportStrategy(Strategy, 'keycloak') {
       throw new Error(`Userinfo-Endpoint Fehler: ${res.status}`);
     }
 
-    const userinfo = await res.json();
+    const userinfo = (await res.json()) as KeycloakUserinfo;
 
     const realmRoles: string[] = userinfo.realm_access?.roles ?? [];
     const role = realmRoles.includes('admin')
