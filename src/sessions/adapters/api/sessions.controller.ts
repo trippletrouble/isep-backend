@@ -474,18 +474,9 @@ export class SessionsController {
   async generateInvite(
     @Param('id') sessionId: string,
     @CurrentUser() user: User,
-  ): Promise<SuccessResponse<InviteResponseDto>> {
+  ): Promise<InviteResponseDto> {
     try {
-      const invite = await this.generateInviteUseCase.execute(
-        sessionId,
-        user.id,
-      );
-
-      return {
-        status: 'success',
-        timestamp: new Date().toISOString(),
-        data: invite,
-      };
+      return await this.generateInviteUseCase.execute(sessionId, user.id);
     } catch (error) {
       if (error instanceof SessionNotFoundError) {
         throw new NotFoundException({

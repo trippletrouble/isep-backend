@@ -1,6 +1,11 @@
 import { MoveFigureRequestDto } from '../dtos';
 import { Inject, Injectable, Optional } from '@nestjs/common';
 import { SessionRepositoryPort } from '../../ports';
+import {
+  FINAL_GOAL_POSITION,
+  PossibleMoveCalculatorUseCase,
+  isFinalGoalPosition,
+} from './possible-move-calculator.use-case';
 import { LudoEngine, MoveResult } from '../../domain';
 import { GameStateCacheService } from '../services/game-state-cache.service';
 import {
@@ -10,7 +15,7 @@ import {
   NotYourTurnError,
   SessionNotFoundError,
 } from './errors';
-import { MoveFigureResultType } from './types/move-figure-result.type';
+import { MoveFigureResultType, MoveOutcomeType } from './types/move-figure-result.type';
 import { SessionEventsService } from '../services';
 
 @Injectable()
@@ -20,6 +25,7 @@ export class MoveFigureUseCase {
     private readonly sessionRepository: SessionRepositoryPort,
     private readonly cache: GameStateCacheService,
     private readonly ludoEngine: LudoEngine,
+    private readonly possibleMoveCalculator: PossibleMoveCalculatorUseCase,
     @Optional()
     private readonly sessionEvents?: SessionEventsService,
   ) {}
@@ -46,6 +52,21 @@ export class MoveFigureUseCase {
       throw new DiceNotRolledError();
     }
 
+    const possibleMoves = this.possibleMoveCalculator.calculate(
+      gameState,
+      userId,
+      gameState.lastDiceValue,
+    );
+    const selectedMove = possibleMoves.find(
+      (move) =>
+        move.figureId === request.figureId &&
+        move.toPosition === request.toPosition,
+    );
+
+    if (!selectedMove) {
+      throw new InvalidMoveError();
+    }
+
     let result: MoveResult;
     try {
       result = this.ludoEngine.applyMove(
@@ -59,6 +80,23 @@ export class MoveFigureUseCase {
     if (result.toPosition !== request.toPosition) {
       throw new InvalidMoveError();
     }
+
+    const capturedFigure = selectedMove.capturesOpponent
+      ? gameState.figures.find(
+        (figure) =>
+          figure.playerId !== userId &&
+          figure.position === selectedMove.toPosition,
+      )
+      : undefined;
+    const outcome = this.determineOutcome(
+      gameState.figures.filter((figure) => figure.playerId === userId),
+      selectedMove.figureId,
+      selectedMove.toPosition,
+      Boolean(capturedFigure),
+    );
+    const turnForfeit = gameState.consecutiveSixes >= 3;
+    const rollAgain =
+      gameState.lastDiceValue === 6 && !turnForfeit && outcome !== 'GAME_WON';
 
     await this.sessionRepository.applyMove({
       sessionId,
@@ -89,6 +127,9 @@ export class MoveFigureUseCase {
       toPosition: result.toPosition,
     });
 
+    // Alle Clients mit vollem GameState versorgen — Figurenpositionen, diceRolledThisTurn etc.
+    this.sessionEvents?.emit(sessionId, 'game_state', updatedGameState);
+
     if (
       updatedGameState.currentPlayerId !== gameState.currentPlayerId ||
       updatedGameState.turnNumber !== gameState.turnNumber
@@ -116,5 +157,27 @@ export class MoveFigureUseCase {
       turnForfeit: result.turnForfeit,
       gameState: updatedGameState,
     };
+  }
+
+  private determineOutcome(
+    ownFigures: { id: number; position: number; status: string }[],
+    movedFigureId: number,
+    toPosition: number,
+    capturesOpponent: boolean,
+  ): MoveOutcomeType {
+    if (capturesOpponent) {
+      return 'CAPTURED';
+    }
+    if (isFinalGoalPosition(toPosition)) {
+      const allFiguresInGoal = ownFigures.every((figure) =>
+        figure.id !== movedFigureId
+          ? isFinalGoalPosition(figure.position) || figure.status === 'GOAL'
+          : true,
+      );
+
+      return allFiguresInGoal ? 'GAME_WON' : 'GOAL';
+    }
+
+    return 'MOVED';
   }
 }

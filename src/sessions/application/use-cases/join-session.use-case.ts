@@ -75,8 +75,8 @@ export class JoinSessionUseCase {
       const allColors = [
         PlayerColor.RED,
         PlayerColor.BLUE,
-        PlayerColor.GREEN,
         PlayerColor.YELLOW,
+        PlayerColor.GREEN,
       ];
       const availableColor = allColors.find((c) => !takenColors.includes(c));
       if (!availableColor) {

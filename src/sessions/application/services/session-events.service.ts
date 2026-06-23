@@ -83,7 +83,7 @@ export class SessionEventsService implements OnModuleInit, OnModuleDestroy {
     );
   }
 
-  emit<T extends Exclude<SessionEventType, 'heartbeat' | 'game_state'>>(
+  emit<T extends Exclude<SessionEventType, 'heartbeat' >>(
     sessionId: string,
     eventType: T,
     data: SessionEventPayloadMap[T],
