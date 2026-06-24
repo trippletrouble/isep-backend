@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 
-import { PublicProfileResponseDto } from '../dtos/public-profile.response.dto';
-import { UserRepositoryPort } from '../../../auth/ports/user-repository.port';
+import { PublicProfileResponseDto } from '../dtos';
+import { UserRepositoryPort } from '../../../auth';
 
 @Injectable()
 export class GetPublicProfileUseCase {

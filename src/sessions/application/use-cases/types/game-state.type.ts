@@ -4,7 +4,7 @@ import {
   BoardTheme,
   AdditionalRule,
 } from '../../../domain';
-import { GameStateFromPlayerType } from './game-state-from-Player.type';
+import { GameStateFromPlayerType } from './game-state-from-player.type';
 import { GameStateFigureType } from './game-state-figure.type';
 
 export type GameStateType = {

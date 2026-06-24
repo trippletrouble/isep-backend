@@ -10,9 +10,8 @@ import {
 } from '@nestjs/common';
 import { Request } from 'express';
 import { Observable } from 'rxjs';
-import { SessionGuard } from '../../../auth/guards/session.guard';
-import { SessionEventsService } from '../../application/services';
-import { SessionNotFoundError } from '../../application/use-cases/errors';
+import { SessionGuard } from '../../../auth';
+import { SessionEventsService, SessionNotFoundError } from '../../application';
 
 @Controller('sessions')
 export class SessionLiveController {

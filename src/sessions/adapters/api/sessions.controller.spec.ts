@@ -18,11 +18,11 @@ import {
   GetLobbyUseCase,
   UpdateLobbySettingsUseCase,
 } from '../../application';
-import { GetGameStateUseCase } from '../../application/use-cases/get-game-state.use-case';
-import { RollDiceUseCase } from '../../application/use-cases/roll-dice.use-case';
-import { SessionNotFoundError } from '../../application/use-cases/errors';
+import { GetGameStateUseCase } from '../../application';
+import { RollDiceUseCase } from '../../application';
+import { SessionNotFoundError } from '../../application';
 import { NotFoundException } from '@nestjs/common';
-import { AuthService } from '../../../auth/application/auth.service';
+import { AuthService } from '../../../auth';
 import { ThrottlerModule } from '@nestjs/throttler';
 
 describe('SessionsController', () => {

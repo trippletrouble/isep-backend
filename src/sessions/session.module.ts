@@ -1,8 +1,12 @@
 import { Module } from '@nestjs/common';
-import { PrismaModule } from '../prisma/prisma.module';
-import { SessionRepositoryPort } from './ports';
-import { PrismaSessionRepository } from './adapters';
-import { SessionsController, SessionLiveController } from './adapters';
+import { PrismaModule } from '../prisma';
+import { SessionRepositoryPort, DiceClientPort } from './ports';
+import {
+  SessionsController,
+  SessionLiveController,
+  PrismaSessionRepository,
+  HttpDiceClientAdapter,
+} from './adapters';
 import {
   CreateSessionUseCase,
   LeaveSessionUseCase,
@@ -15,21 +19,19 @@ import {
   GetSessionPlayersUseCase,
   JoinSessionUseCase,
   GenerateInviteUseCase,
+  GetGameStateUseCase,
+  RollDiceUseCase,
+  GetPossibleMovesUseCase,
+  GetLobbyUseCase,
+  MoveFigureUseCase,
+  StartSessionUseCase,
+  SessionEventsService,
+  GameStateCacheService,
 } from './application';
-import { AuthModule } from '../auth/auth.module';
-import { GetGameStateUseCase } from './application/use-cases/get-game-state.use-case';
-import { RollDiceUseCase } from './application/use-cases/roll-dice.use-case';
-import { GetPossibleMovesUseCase } from './application';
-import { GetLobbyUseCase } from './application';
+import { AuthModule } from '../auth';
 import { LudoEngine } from './domain';
-import { MoveFigureUseCase } from './application';
-import { DiceClientPort } from './ports/dice-client.port';
-import { HttpDiceClientAdapter } from './adapters/dice/http-dice-client.adapter';
-import { StartSessionUseCase } from './application';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
-import { SessionEventsService } from './application/services';
-import { GameStateCacheService } from './application/services/game-state-cache.service';
 import { SessionSseService } from './session-sse.service';
 
 @Module({

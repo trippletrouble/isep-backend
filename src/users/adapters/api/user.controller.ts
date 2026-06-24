@@ -1,10 +1,12 @@
 import { Controller, Get, Param, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { GetPublicProfileUseCase } from '../../application/use-cases/get-public-profile.use-case';
-import { GetUserStatsUseCase } from '../../application/use-cases/get-user-stats.use-case';
-import { PublicProfileResponseDto } from '../../application/dtos/public-profile.response.dto';
-import { PlayerStatsResponseDto } from '../../application/dtos/player-stats.response.dto';
-import { SessionGuard } from '../../../auth/guards/session.guard';
+import {
+  GetPublicProfileUseCase,
+  GetUserStatsUseCase,
+  PublicProfileResponseDto,
+  PlayerStatsResponseDto,
+} from '../../application';
+import { SessionGuard } from '../../../auth';
 
 @ApiTags('users')
 @Controller('users')

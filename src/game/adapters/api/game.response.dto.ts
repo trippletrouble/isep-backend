@@ -1,4 +1,4 @@
-import { Game } from '../../domain/model/game';
+import { Game } from '../../domain';
 
 export class GameResponseDto {
   readonly id: string;

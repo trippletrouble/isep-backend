@@ -4,8 +4,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { of } from 'rxjs';
-import { SessionEventsService } from '../../application/services';
-import { SessionNotFoundError } from '../../application/use-cases/errors';
+import { SessionEventsService } from '../../application';
+import { SessionNotFoundError } from '../../application';
 import { SessionLiveController } from './session-live.controller';
 
 describe('SessionLiveController', () => {

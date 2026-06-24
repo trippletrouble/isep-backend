@@ -1,16 +1,18 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../../prisma/prisma.service';
+import { PrismaService } from '../../../prisma';
 import { SessionRepositoryPort } from '../../ports';
 import { LobbySettings } from '../../domain';
-import { Session } from 'src/generated/prisma-class/session';
-import { User } from 'src/generated/prisma-class/user';
-import { GameStateType } from 'src/sessions/application/use-cases/types/game-state.type';
-import { SessionWithParticipants } from '../../application/use-cases/types';
-import { Prisma } from 'src/generated/prisma-client/client';
-import { GameParticipant } from '../../../generated/prisma-class/game_participant';
-import { ApplyMoveData } from '../../application/use-cases/types/apply-move-data.type';
-import { GameHistoryEventDto } from '../../application/dtos/game-history-event.dto';
-import { FINAL_GOAL_POSITION, isFinalGoalPosition } from 'src/sessions/application/use-cases/possible-move-calculator.use-case';
+import { Session } from '$gen/prisma-class/session';
+import { User } from '$gen/prisma-class/user';
+import {
+  GameStateType,
+  SessionWithParticipants,
+  ApplyMoveData,
+  GameHistoryEventDto,
+} from '../../application';
+import { isFinalGoalPosition } from '../../domain';
+import { Prisma } from '$gen/prisma-client/client';
+import { GameParticipant } from '$gen/prisma-class/game_participant';
 
 @Injectable()
 export class PrismaSessionRepository implements SessionRepositoryPort {

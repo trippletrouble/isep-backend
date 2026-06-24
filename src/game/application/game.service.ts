@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { Game } from '../domain/model/game';
-import { GameRepositoryPort } from '../ports/game-repository.port';
+import { Game } from '../domain';
+import { GameRepositoryPort } from '../ports';
 import { randomUUID } from 'crypto';
 
 @Injectable()

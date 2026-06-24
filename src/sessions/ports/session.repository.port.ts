@@ -1,12 +1,14 @@
 import { LobbySettings } from '../domain';
 import { User } from '../../generated/prisma-class/user';
-import { Session } from '../../generated/prisma-class/session';
-import { GameStateType } from '../application/use-cases/types/game-state.type';
-import { SessionWithParticipants } from '../application/use-cases/types';
-import { ParticipantDto } from '../application/dtos/participant.dto';
+import { Session } from '$gen/prisma-class/session';
+import {
+  GameStateType,
+  SessionWithParticipants,
+  ParticipantDto,
+  ApplyMoveData,
+  GameHistoryEventDto,
+} from '../application';
 import { GameParticipant } from '../../generated/prisma-class/game_participant';
-import { ApplyMoveData } from '../application/use-cases/types/apply-move-data.type';
-import { GameHistoryEventDto } from '../application/dtos/game-history-event.dto';
 
 export abstract class SessionRepositoryPort {
   abstract createSession(

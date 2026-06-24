@@ -14,7 +14,9 @@
     "outDir": "./dist",
     "baseUrl": "./",
     "paths": {
-      "..prisma-clientenums": ["src/generated/prisma-client/enums"]
+      /*"..prisma-clientenums": ["src/generated/prisma-client/enums"],*/
+      "@common": ["src/common"],
+      "$gen/*": ["src/generated/*"],
     },
     "incremental": true,
     "skipLibCheck": true,

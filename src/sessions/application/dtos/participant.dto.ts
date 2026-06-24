@@ -1,9 +1,6 @@
-import {
-  PlayerColor,
-  PlayerType,
-} from '../../../generated/prisma-client/enums';
+import { PlayerColor, PlayerType } from '$gen/prisma-client/enums';
 
-import { GameParticipant } from '../../../generated/prisma-class/game_participant';
+import { GameParticipant } from '$gen/prisma-class/game_participant';
 
 export class ParticipantDto extends GameParticipant {
   constructor(

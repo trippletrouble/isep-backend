@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy } from 'passport-oauth2';
-import { AuthService } from '../application/auth.service';
-import { User } from '../../generated/prisma-class/user';
-import { UserRole } from '../../generated/prisma-client/enums';
-import { appConfig } from '../../common/config/app.config';
+import { AuthService } from '../application';
+import { User } from '$gen/prisma-class/user';
+import { UserRole } from '$gen/prisma-client/enums';
+import { appConfig } from '@common';
 
 interface KeycloakRealmAccess {
   roles: string[];

@@ -1,13 +1,5 @@
-import { Game, GameStatus } from './domain/model/game';
-
-// Placeholder type until Prisma model is generated.
-// Will be replaced with `import { Game as GameRecord } from '@prisma/client'`
-export interface GamePersistenceModel {
-  id: string;
-  status: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
+import { Game } from './domain';
+import { GamePersistenceModel, GameStatus } from './util';
 
 export class GameMapper {
   static toDomain(record: GamePersistenceModel): Game {

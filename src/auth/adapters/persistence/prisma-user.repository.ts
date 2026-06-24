@@ -1,12 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import {
-  CreateUserDto,
-  FinishedParticipationStats,
-  UserRepositoryPort,
-} from '../../ports/user-repository.port';
-import { User } from '../../../generated/prisma-class/user';
-import { PrismaService } from '../../../prisma/prisma.service';
-import { UserRole } from '../../../generated/prisma-client/enums';
+import { User } from '$gen/prisma-class/user';
+import { PrismaService } from '../../../prisma';
+import { UserRole } from '$gen/prisma-client/enums';
+import { UserRepositoryPort } from '../../ports';
+import { CreateUserDto, FinishedParticipationStats } from '../../util';
 
 @Injectable()
 export class PrismaUserRepository implements UserRepositoryPort {

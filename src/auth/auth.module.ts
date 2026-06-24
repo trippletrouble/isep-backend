@@ -1,12 +1,11 @@
 import { Module } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
-import { AuthController } from './adapters/api/auth.controller';
-import { AuthService } from './application/auth.service';
-import { PrismaUserRepository } from './adapters/persistence/prisma-user.repository';
-import { KeycloakStrategy } from './strategies/keycloak.strategy';
+import { AuthController, PrismaUserRepository } from './adapters';
+import { AuthService } from './application';
+import { KeycloakStrategy } from './strategies';
 import { ConfigModule } from '@nestjs/config';
-import { SessionGuard } from './guards/session.guard';
-import { UserRepositoryPort } from './ports/user-repository.port';
+import { SessionGuard } from './guards';
+import { UserRepositoryPort } from './ports';
 
 @Module({
   imports: [PassportModule, ConfigModule],

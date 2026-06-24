@@ -1,4 +1,4 @@
-import { GameStatus } from '../../domain/model/session.model';
+import { GameStatus } from '../../domain';
 import { LobbySettingsDto } from './lobby-settings.dto';
 import { LobbyPlayerDto } from './lobby-player.dto';
 

@@ -16,7 +16,7 @@ import {
   SessionEventMessage,
   SessionEventPayloadMap,
   SessionEventType,
-} from '../use-cases/types';
+} from '../use-cases';
 
 const HEARTBEAT_INTERVAL_MS = 15000;
 
@@ -83,7 +83,7 @@ export class SessionEventsService implements OnModuleInit, OnModuleDestroy {
     );
   }
 
-  emit<T extends Exclude<SessionEventType, 'heartbeat' >>(
+  emit<T extends Exclude<SessionEventType, 'heartbeat'>>(
     sessionId: string,
     eventType: T,
     data: SessionEventPayloadMap[T],

@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRedis } from '@nestjs-modules/ioredis';
 import Redis from 'ioredis';
-import { GameStateType } from '../use-cases/types/game-state.type';
+import { GameStateType } from '../use-cases';
 
 const KEY_PREFIX = 'session';
 const TTL_SECONDS = 1800;

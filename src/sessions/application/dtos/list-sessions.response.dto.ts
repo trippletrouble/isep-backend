@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Session } from '../../../generated/prisma-class/session';
+import { Session } from '$gen/prisma-class/session';
 
 export class ListSessionsResponseDto {
   @ApiProperty({ type: [Session] })

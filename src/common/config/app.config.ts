@@ -20,6 +20,8 @@ export const appConfig = {
 
   redis_url: validateEnv('REDIS_URL'),
 
+  dice_service_url: validateEnv('DICE_SERVICE_URL'),
+
   node_env: validateEnv('NODE_ENV'),
 };
 

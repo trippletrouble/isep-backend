@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 
-import { PlayerStatsResponseDto } from '../dtos/player-stats.response.dto';
-import { UserRepositoryPort } from '../../../auth/ports/user-repository.port';
+import { PlayerStatsResponseDto } from '../dtos';
+import { UserRepositoryPort } from '../../../auth';
 
 @Injectable()
 export class GetUserStatsUseCase {
