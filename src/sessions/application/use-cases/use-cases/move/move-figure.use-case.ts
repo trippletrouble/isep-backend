@@ -1,12 +1,12 @@
 import { MoveFigureRequestDto } from '../../../dtos';
 import { Inject, Injectable, Optional } from '@nestjs/common';
 import { SessionRepositoryPort } from '../../../../ports';
+import { PossibleMoveCalculatorUseCase } from './possible-move-calculator.use-case';
 import {
-  FINAL_GOAL_POSITION,
-  PossibleMoveCalculatorUseCase,
+  LudoEngine,
+  MoveResult,
   isFinalGoalPosition,
-} from './possible-move-calculator.use-case';
-import { LudoEngine, MoveResult } from '../../../../domain';
+} from '../../../../domain';
 import { GameStateCacheService } from '../../../services';
 import {
   DiceNotRolledError,
@@ -81,23 +81,6 @@ export class MoveFigureUseCase {
     if (result.toPosition !== request.toPosition) {
       throw new InvalidMoveError();
     }
-
-    const capturedFigure = selectedMove.capturesOpponent
-      ? gameState.figures.find(
-        (figure) =>
-          figure.playerId !== userId &&
-          figure.position === selectedMove.toPosition,
-      )
-      : undefined;
-    const outcome = this.determineOutcome(
-      gameState.figures.filter((figure) => figure.playerId === userId),
-      selectedMove.figureId,
-      selectedMove.toPosition,
-      Boolean(capturedFigure),
-    );
-    const turnForfeit = gameState.consecutiveSixes >= 3;
-    const rollAgain =
-      gameState.lastDiceValue === 6 && !turnForfeit && outcome !== 'GAME_WON';
 
     await this.sessionRepository.applyMove({
       sessionId,

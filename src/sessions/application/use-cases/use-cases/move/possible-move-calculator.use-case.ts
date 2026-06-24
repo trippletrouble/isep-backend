@@ -1,44 +1,23 @@
 import { Injectable } from '@nestjs/common';
-
 import {
   GameStateType,
   GameStateFigureType,
   GameStateFromPlayerType,
   PossibleMoveType,
 } from '../../types';
+import {
+  GOAL_LANE_SIZE,
+  MAIN_TRACK_SIZE,
+  START_FIELDS,
+  GOAL_START_FIELDS,
+  FINAL_GOAL_POSITIONS,
+  isFinalGoalPosition,
+} from '../../../../domain';
 
-export const FINAL_GOAL_POSITION = 72;
 const MAIN_TRACK_START = 0;
-const MAIN_TRACK_SIZE = 52;
-const MAIN_TRACK_END = MAIN_TRACK_START + MAIN_TRACK_SIZE - 1;
-const GOAL_LANE_SIZE = 5;
+const MAIN_TRACK_END = MAIN_TRACK_SIZE - 1;
 const LAST_GOAL_LANE_INDEX = GOAL_LANE_SIZE - 1;
 const GOAL_ENTRY_PROGRESS = MAIN_TRACK_SIZE - 1;
-const START_FIELDS = {
-  RED: 0,
-  BLUE: 13,
-  YELLOW: 26,
-  GREEN: 39,
-} as const;
-
-const GOAL_START_FIELDS = {
-  RED: 52,
-  BLUE: 57,
-  YELLOW: 62,
-  GREEN: 67,
-} as const;
-
-export const FINAL_GOAL_POSITIONS = {
-  RED: 72,
-  BLUE: 73,
-  YELLOW: 74,
-  GREEN: 75,
-} as const;
-
-export const isFinalGoalPosition = (position: number): boolean =>
-  Object.values(FINAL_GOAL_POSITIONS).includes(
-    position as (typeof FINAL_GOAL_POSITIONS)[keyof typeof FINAL_GOAL_POSITIONS],
-  );
 
 @Injectable()
 export class PossibleMoveCalculatorUseCase {

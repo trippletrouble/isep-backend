@@ -9,8 +9,8 @@ import {
   SessionWithParticipants,
   ApplyMoveData,
   GameHistoryEventDto,
-  isFinalGoalPosition,
 } from '../../application';
+import { isFinalGoalPosition } from '../../domain';
 import { Prisma } from '$gen/prisma-client/client';
 import { GameParticipant } from '$gen/prisma-class/game_participant';
 
