@@ -1,6 +1,6 @@
 import { GameStateCacheService } from './game-state-cache.service';
 import Redis from 'ioredis';
-import { GameStateType } from '../use-cases/types/game-state.type';
+import { GameStateType } from '../use-cases';
 
 describe('GameStateCacheService', () => {
   let service: GameStateCacheService;

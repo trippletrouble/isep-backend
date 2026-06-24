@@ -27,6 +27,7 @@ import {
   StartSessionUseCase,
   SessionEventsService,
   GameStateCacheService,
+  PossibleMoveCalculatorUseCase,
 } from './application';
 import { AuthModule } from '../auth';
 import { LudoEngine } from './domain';
@@ -56,6 +57,7 @@ import { SessionSseService } from './session-sse.service';
     ReconnectUseCase,
     RollDiceUseCase,
     GetPossibleMovesUseCase,
+    PossibleMoveCalculatorUseCase,
     GetLobbyUseCase,
     LudoEngine,
     MoveFigureUseCase,
