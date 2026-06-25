@@ -1,4 +1,4 @@
-import { MoveOutcomeType } from './move-figure-result.type';
+import { MoveOutcomeType } from '@common';
 
 export type ApplyMoveData = {
   sessionId: string;

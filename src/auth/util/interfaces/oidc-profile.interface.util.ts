@@ -1,4 +1,4 @@
-import { UserRole } from '@common';
+import { UserRole } from '@prisma/client';
 
 export interface OidcProfile {
   sub: string;
