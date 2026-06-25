@@ -43,6 +43,7 @@ export class RollDiceUseCase {
 
     const flyDebuffMap = new Map<number, number>();
     let plagueFlyAcquired = false;
+    let acquiredFigureId: number | undefined;
 
     if (flyActive) {
       const playerFigures = gameState.figures.filter(
@@ -86,6 +87,7 @@ export class RollDiceUseCase {
             true,
           );
           plagueFlyAcquired = true;
+          acquiredFigureId = eligible.id;
         }
       }
     }
@@ -121,6 +123,14 @@ export class RollDiceUseCase {
       turnForfeit: result.turnForfeit,
       plagueFlyAcquired,
     });
+
+    if (plagueFlyAcquired && acquiredFigureId !== undefined) {
+      this.sessionEvents?.emit(sessionId, 'plague_fly_acquired', {
+        figureId: acquiredFigureId,
+        playerId,
+        activeFlyCount: updatedGameState.activeFlyCount,
+      });
+    }
 
     if (!result.hasMoves || result.turnForfeit) {
       this.sessionEvents?.emit(sessionId, 'turn_changed', {
