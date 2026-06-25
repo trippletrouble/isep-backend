@@ -25,6 +25,7 @@ export class PossibleMoveCalculatorUseCase {
     gameState: GameStateType,
     playerId: string,
     diceValue: number,
+    flyDebuffMap?: Map<number, number>,
   ): PossibleMoveType[] {
     const player = gameState.players.find((p) => p.id === playerId);
     if (!player) {
@@ -35,14 +36,15 @@ export class PossibleMoveCalculatorUseCase {
     );
 
     return ownFigures
-      .map((figure) =>
-        this.calculateMoveForFigure(
+      .map((figure) => {
+        const effectiveDice = flyDebuffMap?.get(figure.id) ?? diceValue; // ← neu
+        return this.calculateMoveForFigure(
           figure,
           player,
           gameState.figures,
-          diceValue,
-        ),
-      )
+          effectiveDice,
+        );
+      })
       .filter((move): move is PossibleMoveType => move !== null);
   }
 

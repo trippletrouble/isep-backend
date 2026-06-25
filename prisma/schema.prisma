@@ -182,6 +182,7 @@ enum BoardTheme {
 enum AdditionalRule {
   THROW_AGAIN_ON_6
   THREE_SIXES_LOSE_TURN
+  PLAGUE_FLY
 }
 
 enum MoveOutcome {

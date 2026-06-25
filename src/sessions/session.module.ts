@@ -30,7 +30,7 @@ import {
   PossibleMoveCalculatorUseCase,
 } from './application';
 import { AuthModule } from '../auth';
-import { LudoEngine } from './domain';
+import { FlyDomainService, LudoEngine } from './domain';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { SessionSseService } from './session-sse.service';
@@ -72,6 +72,7 @@ import { SessionSseService } from './session-sse.service';
     GameStateCacheService,
     SessionEventsService,
     SessionSseService,
+    FlyDomainService,
     {
       provide: SessionRepositoryPort,
       useClass: PrismaSessionRepository,
