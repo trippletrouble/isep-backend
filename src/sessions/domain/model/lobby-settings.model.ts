@@ -1,9 +1,13 @@
 type GameMode = 'CLASSIC';
 type BoardTheme = 'CLASSIC';
-type AdditionalRule = 'THROW_AGAIN_ON_6' | 'THREE_SIXES_LOSE_TURN';
+type AdditionalRule =
+  | 'THROW_AGAIN_ON_6'
+  | 'THREE_SIXES_LOSE_TURN'
+  | 'PLAGUE_FLY';
 const VALID_ADDITIONAL_RULES: AdditionalRule[] = [
   'THROW_AGAIN_ON_6',
   'THREE_SIXES_LOSE_TURN',
+  'PLAGUE_FLY',
 ];
 export class LobbySettings {
   public readonly numberOfPlayers: number;
@@ -59,6 +63,10 @@ export class LobbySettings {
 
   doesThreeSixesLoseTurn(): boolean {
     return this.additionalRules.includes('THREE_SIXES_LOSE_TURN');
+  }
+
+  isPlagueFlyEnabled(): boolean {
+    return this.additionalRules.includes('PLAGUE_FLY');
   }
 
   toPlainObject(): Record<string, any> {
