@@ -5,4 +5,6 @@ export type GameStateFigureType = {
   playerId: string;
   position: number;
   status: PieceStatus;
+  hasPlagueFly: boolean;
+  flyDebuffCount: number;
 };

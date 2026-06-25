@@ -20,6 +20,7 @@ export type GameStateType = {
   diceRolledThisTurn: boolean;
   consecutiveSixes: number;
   activeRules: AdditionalRule[];
+  activeFlyCount: number;
   winnerId: string | null;
   createdAt: string;
   lastUpdatedAt: string;
