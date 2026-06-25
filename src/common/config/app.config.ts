@@ -18,6 +18,8 @@ export const appConfig = {
   keycloak_callback_url: validateEnv('KEYCLOAK_CALLBACK_URL'),
   session_secret: ***ENTFERNT***
 
+  after_login_redirect_url: validateEnv('AFTER_LOGIN_REDIRECT_URL'),
+
   redis_url: validateEnv('REDIS_URL'),
 
   dice_service_url: validateEnv('DICE_SERVICE_URL'),

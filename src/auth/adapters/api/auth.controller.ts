@@ -33,7 +33,7 @@ export class AuthController {
       maxAge: 1000 * 60 * 60,
     });
 
-    res.redirect('/');
+    res.redirect(appConfig.after_login_redirect_url);
   }
 
   @Get('session')
