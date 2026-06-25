@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../prisma';
 import { SessionRepositoryPort } from '../../ports';
-import { LobbySettings } from '../../domain';
+import { LobbySettings, ActiveQuizType } from '../../domain';
 import { Session } from '$gen/prisma-class/session';
 import { User } from '$gen/prisma-class/user';
 import {
@@ -58,12 +58,37 @@ export class PrismaSessionRepository implements SessionRepositoryPort {
             id: 'asc',
           },
         },
+        quizDuels: {
+          where: {
+            status: 'PENDING',
+          },
+          take: 1,
+        },
       },
     });
 
     if (!session) {
       return null;
     }
+
+    const activeQuiz = session.quizDuels[0]
+      ? {
+          id: session.quizDuels[0].id,
+          questionId: session.quizDuels[0].questionId,
+          attackerId: session.quizDuels[0].attackerId,
+          defenderId: session.quizDuels[0].defenderId,
+          attackerAnswer: session.quizDuels[0].attackerAnswer,
+          defenderAnswer: session.quizDuels[0].defenderAnswer,
+          attackerCorrect: session.quizDuels[0].attackerCorrect,
+          defenderCorrect: session.quizDuels[0].defenderCorrect,
+          timeLimitSeconds: session.quizDuels[0].timeLimitSeconds,
+          pendingFigureId: session.quizDuels[0].pendingFigureId,
+          pendingFromPos: session.quizDuels[0].pendingFromPos,
+          pendingToPos: session.quizDuels[0].pendingToPos,
+          diceValue: session.quizDuels[0].diceValue,
+          createdAt: session.quizDuels[0].createdAt.toISOString(),
+        }
+      : null;
 
     return {
       sessionId: session.id,
@@ -92,6 +117,7 @@ export class PrismaSessionRepository implements SessionRepositoryPort {
       consecutiveSixes: session.consecutiveSixes,
       activeRules: session.additionalRules,
       winnerId: session.winnerId,
+      activeQuiz,
       createdAt: session.createdAt.toISOString(),
       lastUpdatedAt: session.updatedAt.toISOString(),
     };
@@ -548,5 +574,156 @@ export class PrismaSessionRepository implements SessionRepositoryPort {
       ...e,
       createdAt: e.createdAt.toISOString(),
     }));
+  }
+
+  async createQuizDuel(data: {
+    sessionId: string;
+    attackerId: string;
+    defenderId: string;
+    questionId: string;
+    timeLimitSeconds: number;
+    pendingFigureId: number;
+    pendingFromPos: number;
+    pendingToPos: number;
+    diceValue: number;
+  }): Promise<string> {
+    return this.prisma.$transaction(async (tx) => {
+      const quizDuel = await tx.quizDuel.create({
+        data: {
+          sessionId: data.sessionId,
+          attackerId: data.attackerId,
+          defenderId: data.defenderId,
+          questionId: data.questionId,
+          timeLimitSeconds: data.timeLimitSeconds,
+          pendingFigureId: data.pendingFigureId,
+          pendingFromPos: data.pendingFromPos,
+          pendingToPos: data.pendingToPos,
+          diceValue: data.diceValue,
+          status: 'PENDING',
+        },
+      });
+
+      await tx.session.update({
+        where: { id: data.sessionId },
+        data: { status: 'QUIZ_PENDING', updatedAt: new Date() },
+      });
+
+      return quizDuel.id;
+    });
+  }
+
+  async resolveQuizDuel(data: {
+    quizDuelId: string;
+    outcome: 'ATTACKER_WIN' | 'DEFENDER_WIN' | 'DRAW';
+    captureProceeds: boolean;
+  }): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      const quizDuel = await tx.quizDuel.findUnique({
+        where: { id: data.quizDuelId },
+      });
+
+      if (!quizDuel) {
+        throw new Error('Quiz duel not found');
+      }
+
+      await tx.quizDuel.update({
+        where: { id: data.quizDuelId },
+        data: {
+          status: 'RESOLVED',
+          outcome: data.outcome,
+          resolvedAt: new Date(),
+        },
+      });
+
+      await tx.session.update({
+        where: { id: quizDuel.sessionId },
+        data: {
+          status: 'IN_PROGRESS',
+          updatedAt: new Date(),
+        },
+      });
+
+      if (data.captureProceeds) {
+        // Move attacker's figure to the destination position
+        await tx.figure.update({
+          where: {
+            sessionId_id: {
+              sessionId: quizDuel.sessionId,
+              id: quizDuel.pendingFigureId,
+            },
+          },
+          data: {
+            position: quizDuel.pendingToPos,
+            status: 'ACTIVE',
+          },
+        });
+
+        // Find the defender's figure(s) at the destination position to capture
+        const defenderFigures = await tx.figure.findMany({
+          where: {
+            sessionId: quizDuel.sessionId,
+            participantId: quizDuel.defenderId,
+            position: quizDuel.pendingToPos,
+          },
+        });
+
+        for (const figure of defenderFigures) {
+          await tx.figure.update({
+            where: {
+              sessionId_id: {
+                sessionId: quizDuel.sessionId,
+                id: figure.id,
+              },
+            },
+            data: {
+              position: -1,
+              status: 'HOME',
+            },
+          });
+        }
+
+        // Increment attacker's captured figures count
+        await tx.gameParticipant.update({
+          where: {
+            id: quizDuel.attackerId,
+          },
+          data: {
+            figuresCaptured: {
+              increment: 1,
+            },
+          },
+        });
+      }
+    });
+  }
+
+  async findActiveQuizDuel(sessionId: string): Promise<ActiveQuizType | null> {
+    const quizDuel = await this.prisma.quizDuel.findFirst({
+      where: {
+        sessionId,
+        status: 'PENDING',
+      },
+    });
+
+    if (!quizDuel) {
+      return null;
+    }
+
+    return {
+      id: quizDuel.id,
+      questionId: quizDuel.questionId,
+      attackerId: quizDuel.attackerId,
+      defenderId: quizDuel.defenderId,
+      attackerAnswer: quizDuel.attackerAnswer,
+      defenderAnswer: quizDuel.defenderAnswer,
+      attackerCorrect: quizDuel.attackerCorrect,
+      defenderCorrect: quizDuel.defenderCorrect,
+      timeLimitSeconds: quizDuel.timeLimitSeconds,
+      pendingFigureId: quizDuel.pendingFigureId,
+      pendingFromPos: quizDuel.pendingFromPos,
+      pendingToPos: quizDuel.pendingToPos,
+      diceValue: quizDuel.diceValue,
+      createdAt: quizDuel.createdAt.toISOString(),
+    };
   }
 }
