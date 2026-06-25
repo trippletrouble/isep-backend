@@ -6,10 +6,13 @@ import {
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { SuccessResponse } from '../interfaces/api-response.interface';
+import { SuccessResponse } from '../util';
 
 @Injectable()
-export class SuccessInterceptor<T> implements NestInterceptor<T, SuccessResponse<T>> {
+export class SuccessInterceptor<T> implements NestInterceptor<
+  T,
+  SuccessResponse<T>
+> {
   intercept(
     context: ExecutionContext,
     next: CallHandler<T>,

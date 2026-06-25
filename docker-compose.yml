@@ -1,24 +1,24 @@
 services:
-  postgres:
-    image: postgres:17.9
-    environment:
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U myuser -d isep_db"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    ports:
-      - '${POSTGRES_PORT}:5432'
-    networks:
-      - isep
-    volumes:
-      - postgres:/var/lib/postgresql/data
-    profiles:
-      - 'db-standalone'
-      - ''
+#  postgres:
+#    image: postgres:17.9
+#    environment:
+#      - POSTGRES_USER=${POSTGRES_USER}
+#      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+#      - POSTGRES_DB=${POSTGRES_DB}
+#    healthcheck:
+#      test: ["CMD-SHELL", "pg_isready -U myuser -d isep_db"]
+#      interval: 10s
+#      timeout: 5s
+#      retries: 5
+#    ports:
+#      - '${POSTGRES_PORT}:5432'
+#    networks:
+#      - isep
+#    volumes:
+#      - postgres:/var/lib/postgresql/data
+#    profiles:
+#      - 'db-standalone'
+#      - ''
 
 
   nestjs:
@@ -33,9 +33,9 @@ services:
       - '${BACKEND_PORT}:3100'
     networks:
       - isep
-    depends_on:
-      postgres:
-        condition: service_healthy
+#    depends_on:
+#      postgres:
+#        condition: service_healthy
 
     profiles:
       - 'backend-standalone'
@@ -44,5 +44,5 @@ services:
 networks:
   isep:
     driver: bridge
-volumes:
-  postgres:
+#volumes:
+#  postgres:
