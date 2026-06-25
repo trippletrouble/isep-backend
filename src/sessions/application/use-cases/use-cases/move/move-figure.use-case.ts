@@ -18,6 +18,7 @@ import {
 import { MoveFigureResultType } from '../../types';
 import { SessionEventsService } from '../../../services';
 import { MoveOutcomeType } from '@common';
+import { FlyDomainService } from '../../../../domain';
 
 @Injectable()
 export class MoveFigureUseCase {
@@ -27,6 +28,7 @@ export class MoveFigureUseCase {
     private readonly cache: GameStateCacheService,
     private readonly ludoEngine: LudoEngine,
     private readonly possibleMoveCalculator: PossibleMoveCalculatorUseCase,
+    private readonly flyDomainService: FlyDomainService,
     @Optional()
     private readonly sessionEvents?: SessionEventsService,
   ) {}
@@ -95,6 +97,71 @@ export class MoveFigureUseCase {
       turnForfeit: result.turnForfeit,
     });
 
+    let plagueFlyTransferred = false;
+
+    if (
+      gameState.activeRules.includes('PLAGUE_FLY') &&
+      result.capturedFigureId !== null
+    ) {
+      const attackerFigure = gameState.figures.find(
+        (f) => f.id === result.figureId,
+      )!;
+      const victimFigure = gameState.figures.find(
+        (f) => f.id === result.capturedFigureId,
+      )!;
+      const kickResult = this.flyDomainService.resolveKick(
+        attackerFigure,
+        victimFigure,
+      );
+
+      if (kickResult.bothRemoved) {
+        await this.sessionRepository.setFigureHasPlagueFly(
+          sessionId,
+          attackerFigure.id,
+          false,
+        );
+        await this.sessionRepository.setFigureHasPlagueFly(
+          sessionId,
+          victimFigure.id,
+          false,
+        );
+      } else if (kickResult.transferToAttacker) {
+        await this.sessionRepository.setFigureHasPlagueFly(
+          sessionId,
+          victimFigure.id,
+          false,
+        );
+        await this.sessionRepository.setFigureHasPlagueFly(
+          sessionId,
+          attackerFigure.id,
+          true,
+        );
+        plagueFlyTransferred = true;
+      } else if (kickResult.attackerLosesFly) {
+        await this.sessionRepository.setFigureHasPlagueFly(
+          sessionId,
+          attackerFigure.id,
+          false,
+        );
+      }
+    }
+
+    if (
+      gameState.activeRules.includes('PLAGUE_FLY') &&
+      isFinalGoalPosition(result.toPosition)
+    ) {
+      const movingFigure = gameState.figures.find(
+        (f) => f.id === result.figureId,
+      );
+      if (movingFigure?.hasPlagueFly) {
+        await this.sessionRepository.setFigureHasPlagueFly(
+          sessionId,
+          result.figureId,
+          false,
+        );
+      }
+    }
+
     const updatedGameState =
       await this.sessionRepository.findGameStateById(sessionId);
 
@@ -139,6 +206,7 @@ export class MoveFigureUseCase {
       capturedFigureId: result.capturedFigureId,
       rollAgain: result.rollAgain,
       turnForfeit: result.turnForfeit,
+      plagueFlyTransferred,
       gameState: updatedGameState,
     };
   }
