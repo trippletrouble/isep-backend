@@ -1,11 +1,12 @@
 import { Module } from '@nestjs/common';
 import { PrismaModule } from '../prisma';
-import { SessionRepositoryPort, DiceClientPort } from './ports';
+import { SessionRepositoryPort, DiceClientPort, QuizServicePort } from './ports';
 import {
   SessionsController,
   SessionLiveController,
   PrismaSessionRepository,
   HttpDiceClientAdapter,
+  HttpQuizServiceAdapter,
 } from './adapters';
 import {
   CreateSessionUseCase,
@@ -62,6 +63,7 @@ import { SessionSseService } from './session-sse.service';
     LudoEngine,
     MoveFigureUseCase,
     HttpDiceClientAdapter,
+    HttpQuizServiceAdapter,
     UpdateLobbySettingsUseCase,
     JoinSessionUseCase,
     GenerateInviteUseCase,
@@ -79,6 +81,10 @@ import { SessionSseService } from './session-sse.service';
     {
       provide: DiceClientPort,
       useClass: HttpDiceClientAdapter,
+    },
+    {
+      provide: QuizServicePort,
+      useClass: HttpQuizServiceAdapter,
     },
   ],
   exports: [
