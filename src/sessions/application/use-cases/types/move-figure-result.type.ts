@@ -9,5 +9,6 @@ export type MoveFigureResultType = {
   capturedFigureId: number | null;
   rollAgain: boolean;
   turnForfeit: boolean;
+  plagueFlyTransferred: boolean;
   gameState: GameStateType;
 };
