@@ -3,6 +3,7 @@ import {
   GameMode,
   BoardTheme,
   AdditionalRule,
+  ActiveQuizType,
 } from '../../../domain';
 import { GameStateFromPlayerType } from './game-state-from-player.type';
 import { GameStateFigureType } from './game-state-figure.type';
@@ -22,6 +23,7 @@ export type GameStateType = {
   activeRules: AdditionalRule[];
   activeFlyCount: number;
   winnerId: string | null;
+  activeQuiz?: ActiveQuizType | null;
   createdAt: string;
   lastUpdatedAt: string;
 };

@@ -1,4 +1,4 @@
-export type GameStatus = 'WAITING' | 'IN_PROGRESS' | 'FINISHED';
+export type GameStatus = 'WAITING' | 'IN_PROGRESS' | 'QUIZ_PENDING' | 'FINISHED';
 export type GameMode = 'CLASSIC';
 export type BoardTheme = 'CLASSIC';
 export type AdditionalRule =
@@ -34,6 +34,9 @@ export class Session {
   }
   isFinished(): boolean {
     return this.status === 'FINISHED';
+  }
+  isQuizPending(): boolean {
+    return this.status === 'QUIZ_PENDING';
   }
 
   canStart(): boolean {

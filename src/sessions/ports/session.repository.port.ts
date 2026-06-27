@@ -1,4 +1,4 @@
-import { LobbySettings } from '../domain';
+import { LobbySettings, ActiveQuizType } from '../domain';
 import { User } from '../../generated/prisma-class/user';
 import { Session } from '$gen/prisma-class/session';
 import {
@@ -58,6 +58,28 @@ export abstract class SessionRepositoryPort {
     sessionId: string,
   ): Promise<GameHistoryEventDto[]>;
   abstract deleteSessionById(id: string): Promise<void>;
+
+  abstract createQuizDuel(data: {
+    sessionId: string;
+    attackerId: string;
+    defenderId: string;
+    questionId: string;
+    timeLimitSeconds: number;
+    pendingFigureId: number;
+    pendingFromPos: number;
+    pendingToPos: number;
+    diceValue: number;
+  }): Promise<string>;
+
+  abstract resolveQuizDuel(data: {
+    quizDuelId: string;
+    outcome: 'ATTACKER_WIN' | 'DEFENDER_WIN' | 'DRAW';
+    captureProceeds: boolean;
+  }): Promise<void>;
+
+  abstract findActiveQuizDuel(
+    sessionId: string,
+  ): Promise<ActiveQuizType | null>;
 
   abstract setFigureHasPlagueFly(
     sessionId: string,
