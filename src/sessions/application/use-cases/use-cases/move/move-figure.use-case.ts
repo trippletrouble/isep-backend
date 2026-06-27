@@ -178,6 +178,22 @@ export class MoveFigureUseCase {
       toPosition: result.toPosition,
     });
 
+    if (plagueFlyTransferred && result.capturedFigureId !== null) {
+      const attackerFigure = gameState.figures.find(
+        (f) => f.id === result.figureId,
+      )!;
+      const victimFigure = gameState.figures.find(
+        (f) => f.id === result.capturedFigureId,
+      )!;
+      this.sessionEvents?.emit(sessionId, 'plague_fly_transferred', {
+        fromFigureId: victimFigure.id,
+        toFigureId: attackerFigure.id,
+        fromPlayerId: victimFigure.playerId,
+        toPlayerId: attackerFigure.playerId,
+        activeFlyCount: updatedGameState.activeFlyCount,
+      });
+    }
+
     // Alle Clients mit vollem GameState versorgen — Figurenpositionen, diceRolledThisTurn etc.
     this.sessionEvents?.emit(sessionId, 'game_state', updatedGameState);
 
