@@ -1,10 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { appConfig } from '@common';
-import {
-  QuizQuestion,
-  QuizServicePort,
-  QuizValidationResult,
-} from '../../ports';
+import { QuizQuestion, QuizServicePort } from '../../ports';
 
 @Injectable()
 export class HttpQuizServiceAdapter extends QuizServicePort {
@@ -38,54 +34,6 @@ export class HttpQuizServiceAdapter extends QuizServicePort {
     } catch {
       return null;
     }
-  }
-
-  async validateAnswer(
-    questionId: string,
-    answerOptionId: string,
-  ): Promise<QuizValidationResult | null> {
-    try {
-      const response = await fetch(`${this.baseUrl}/quiz/validate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          questionId,
-          answerOptionId,
-        }),
-        signal: AbortSignal.timeout(3000),
-      });
-
-      if (!response.ok) {
-        return null;
-      }
-
-      const body = (await response.json()) as unknown;
-
-      return this.mapValidationResult(body);
-    } catch {
-      return null;
-    }
-  }
-  private mapValidationResult(body: unknown): QuizValidationResult | null {
-    if (!body || typeof body !== 'object') {
-      return null;
-    }
-
-    const obj = body as Record<string, unknown>;
-
-    if (
-      typeof obj.correct !== 'boolean' ||
-      typeof obj.correctAnswerId !== 'string'
-    ) {
-      return null;
-    }
-
-    return {
-      correct: obj.correct,
-      correctAnswerId: obj.correctAnswerId,
-    };
   }
   private mapQuestion(body: unknown): QuizQuestion | null {
     if (!body || typeof body !== 'object') {
