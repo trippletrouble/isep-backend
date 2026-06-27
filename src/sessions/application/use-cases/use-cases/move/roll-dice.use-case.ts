@@ -10,6 +10,7 @@ import {
 } from '../../errors';
 import { DiceRollResultType } from '../../types';
 import { PossibleMoveCalculatorUseCase } from './possible-move-calculator.use-case';
+import { FlyDomainService } from '../../../../domain';
 
 @Injectable()
 export class RollDiceUseCase {
@@ -21,6 +22,7 @@ export class RollDiceUseCase {
     private readonly possibleMoveCalculator: PossibleMoveCalculatorUseCase,
     private readonly cache: GameStateCacheService,
     private readonly ludoEngine: LudoEngine,
+    private readonly flyDomainService: FlyDomainService,
     @Optional()
     private readonly sessionEvents?: SessionEventsService,
   ) {}
@@ -30,34 +32,69 @@ export class RollDiceUseCase {
     playerId: string,
   ): Promise<DiceRollResultType> {
     const gameState = await this.sessionRepository.findGameStateById(sessionId);
-
-    if (!gameState) {
-      throw new SessionNotFoundError();
-    }
-
-    if (gameState.status !== 'IN_PROGRESS') {
+    if (!gameState) throw new SessionNotFoundError();
+    if (gameState.status !== 'IN_PROGRESS')
       throw new InvalidSessionStatusError();
-    }
-
-    if (gameState.currentPlayerId !== playerId) {
-      throw new NotYourTurnError();
-    }
-
-    if (gameState.diceRolledThisTurn) {
-      throw new DiceAlreadyRolledError();
-    }
+    if (gameState.currentPlayerId !== playerId) throw new NotYourTurnError();
+    if (gameState.diceRolledThisTurn) throw new DiceAlreadyRolledError();
 
     const value = await this.diceClient.roll();
-    const result = this.ludoEngine.handleRoll(gameState, value);
+    const flyActive = gameState.activeRules.includes('PLAGUE_FLY');
 
-    const consecutiveSixes = value === 6 ? gameState.consecutiveSixes + 1 : 0;
-    const possibleMoves = this.possibleMoveCalculator.calculate(
-      gameState,
-      playerId,
-      value,
-    );
-    const hasMoves = possibleMoves.length > 0;
-    const turnForfeit = consecutiveSixes >= 3;
+    const flyDebuffMap = new Map<number, number>();
+    let plagueFlyAcquired = false;
+
+    if (flyActive) {
+      const playerFigures = gameState.figures.filter(
+        (f) => f.playerId === playerId,
+      );
+
+      for (const figure of playerFigures) {
+        if (!figure.hasPlagueFly) continue;
+
+        const debuff = this.flyDomainService.rollDebuff();
+        const effectiveDice = this.flyDomainService.applyDebuff(value, debuff);
+        flyDebuffMap.set(figure.id, effectiveDice);
+
+        const newDebuffCount = figure.flyDebuffCount + 1;
+        await this.sessionRepository.incrementFlyDebuffCount(
+          sessionId,
+          figure.id,
+        );
+
+        if (this.flyDomainService.shouldRemoveFlyAfterDebuff(newDebuffCount)) {
+          await this.sessionRepository.setFigureHasPlagueFly(
+            sessionId,
+            figure.id,
+            false,
+          );
+        }
+      }
+
+      if (value === 1) {
+        const playerFigures = gameState.figures.filter(
+          (f) => f.playerId === playerId,
+        );
+        const eligible = playerFigures.find((f) =>
+          this.flyDomainService.canAssignFly(gameState.activeFlyCount, f),
+        );
+
+        if (eligible) {
+          await this.sessionRepository.setFigureHasPlagueFly(
+            sessionId,
+            eligible.id,
+            true,
+          );
+          plagueFlyAcquired = true;
+        }
+      }
+    }
+
+    const freshState =
+      await this.sessionRepository.findGameStateById(sessionId);
+    if (!freshState) throw new SessionNotFoundError();
+
+    const result = this.ludoEngine.handleRoll(freshState, value, flyDebuffMap);
 
     await this.sessionRepository.updateAfterDiceRoll(sessionId, {
       lastDiceValue: value,
@@ -69,13 +106,9 @@ export class RollDiceUseCase {
       await this.sessionRepository.passTurn(sessionId, playerId);
     }
 
-    // Nach allen DB-Updates fetchen — damit currentPlayerId bereits den neuen Spieler enthält
     const updatedGameState =
       await this.sessionRepository.findGameStateById(sessionId);
-
-    if (!updatedGameState) {
-      throw new SessionNotFoundError();
-    }
+    if (!updatedGameState) throw new SessionNotFoundError();
 
     this.cache.set(sessionId, updatedGameState).catch(() => {});
 
@@ -86,16 +119,10 @@ export class RollDiceUseCase {
       rollAgain: result.rollAgain,
       consecutiveSixes: result.consecutiveSixes,
       turnForfeit: result.turnForfeit,
+      plagueFlyAcquired,
     });
 
     if (!result.hasMoves || result.turnForfeit) {
-      this.sessionEvents?.emit(sessionId, 'turn_changed', {
-        currentPlayerId: updatedGameState.currentPlayerId,
-        turnNumber: updatedGameState.turnNumber,
-      });
-    }
-
-    if (!hasMoves || turnForfeit) {
       this.sessionEvents?.emit(sessionId, 'turn_changed', {
         currentPlayerId: updatedGameState.currentPlayerId,
         turnNumber: updatedGameState.turnNumber,
@@ -110,6 +137,7 @@ export class RollDiceUseCase {
       rollAgain: result.rollAgain,
       consecutiveSixes: result.consecutiveSixes,
       turnForfeit: result.turnForfeit,
+      plagueFlyAcquired,
       gameState: updatedGameState,
     };
   }
