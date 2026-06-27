@@ -58,4 +58,14 @@ export abstract class SessionRepositoryPort {
     sessionId: string,
   ): Promise<GameHistoryEventDto[]>;
   abstract deleteSessionById(id: string): Promise<void>;
+
+  abstract setFigureHasPlagueFly(
+    sessionId: string,
+    figureId: number,
+    value: boolean,
+  ): Promise<void>;
+  abstract incrementFlyDebuffCount(
+    sessionId: string,
+    figureId: number,
+  ): Promise<number>;
 }

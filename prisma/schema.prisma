@@ -114,6 +114,8 @@ model Figure {
   participantId String      @map("participant_id") @db.Uuid
   position      Int         @default(-1)
   status        PieceStatus @default(HOME)
+  hasPlagueFly  Boolean     @default(false) @map("has_plague_fly")
+  flyDebuffCount Int        @default(0)     @map("fly_debuff_count")
   updatedAt     DateTime    @updatedAt @map("updated_at")
 
   session     Session         @relation(fields: [sessionId], references: [id], onDelete: Cascade)
