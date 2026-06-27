@@ -19,6 +19,17 @@ export type PlagueFlyTransferredPayload = {
   activeFlyCount: number;
 };
 
+export type QuizStartedPayload = {
+  questionId: string;
+  question: string;
+  answers: { id: string; text: string }[];
+  attackerId: string;
+  defenderId: string;
+  figureId: number;
+  fromPosition: number;
+  toPosition: number;
+};
+
 export type SessionEventPayloadMap = {
   game_state: GameStateType;
   game_started: GameStateType;
@@ -29,4 +40,5 @@ export type SessionEventPayloadMap = {
   heartbeat: HeartbeatEventPayload;
   plague_fly_acquired: PlagueFlyAcquiredPayload; // ← neu
   plague_fly_transferred: PlagueFlyTransferredPayload; // ← neu
+  quiz_started: QuizStartedPayload;
 };

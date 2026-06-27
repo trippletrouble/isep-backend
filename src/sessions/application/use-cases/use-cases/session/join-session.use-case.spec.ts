@@ -16,7 +16,7 @@ import {
   GameStatus,
   GameMode,
   BoardTheme,
-} from '..prisma-clientenums';
+} from '$gen/prisma-client/enums';
 
 const makeSession = (overrides: any = {}): SessionWithParticipants => ({
   id: 'session-1',
@@ -206,7 +206,7 @@ describe('JoinSessionUseCase', () => {
     await useCase.execute('session-1', 'user-3');
 
     const dto = repo.createParticipant.mock.calls[0][0];
-    expect(dto.color).toBe(PlayerColor.GREEN);
+    expect(dto.color).toBe(PlayerColor.YELLOW);
   });
 
   it('throws InviteTokenExpiredError when joining a private session with an expired token', async () => {

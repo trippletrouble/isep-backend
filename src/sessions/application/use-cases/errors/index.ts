@@ -14,3 +14,4 @@ export * from './color-already-taken.error';
 export * from './invalid-invite-token.error';
 export * from './only-host-can-invite.error';
 export * from './invite-token-expired.error';
+export * from './quiz-in-progress.error';

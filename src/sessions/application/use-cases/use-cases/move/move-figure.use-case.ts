@@ -1,6 +1,6 @@
 import { MoveFigureRequestDto } from '../../../dtos';
 import { Inject, Injectable, Optional } from '@nestjs/common';
-import { SessionRepositoryPort } from '../../../../ports';
+import { SessionRepositoryPort, QuizClientPort } from '../../../../ports';
 import { PossibleMoveCalculatorUseCase } from './possible-move-calculator.use-case';
 import {
   LudoEngine,
@@ -14,6 +14,7 @@ import {
   InvalidSessionStatusError,
   NotYourTurnError,
   SessionNotFoundError,
+  QuizInProgressError,
 } from '../../errors';
 import { MoveFigureResultType } from '../../types';
 import { SessionEventsService } from '../../../services';
@@ -25,6 +26,8 @@ export class MoveFigureUseCase {
   constructor(
     @Inject(SessionRepositoryPort)
     private readonly sessionRepository: SessionRepositoryPort,
+    @Inject(QuizClientPort)
+    private readonly quizClient: QuizClientPort,
     private readonly cache: GameStateCacheService,
     private readonly ludoEngine: LudoEngine,
     private readonly possibleMoveCalculator: PossibleMoveCalculatorUseCase,
@@ -41,6 +44,10 @@ export class MoveFigureUseCase {
     const gameState = await this.sessionRepository.findGameStateById(sessionId);
     if (!gameState) {
       throw new SessionNotFoundError();
+    }
+
+    if (gameState.status === 'QUIZ_PENDING') {
+      throw new QuizInProgressError();
     }
 
     if (gameState.status !== 'IN_PROGRESS') {
@@ -82,6 +89,62 @@ export class MoveFigureUseCase {
     }
     if (result.toPosition !== request.toPosition) {
       throw new InvalidMoveError();
+    }
+
+    if (result.capturedFigureId !== null) {
+      const question = await this.quizClient.getRandomQuestion();
+      const defenderFigure = gameState.figures.find((f) => f.id === result.capturedFigureId);
+      if (!defenderFigure) {
+        throw new Error('Defender figure not found');
+      }
+      const defenderId = defenderFigure.playerId;
+
+      await this.sessionRepository.setPendingQuiz(sessionId, {
+        questionId: question.id,
+        attackerId: userId,
+        defenderId,
+        figureId: result.figureId,
+        fromPosition: result.fromPosition,
+        toPosition: result.toPosition,
+        diceValue: gameState.lastDiceValue,
+      });
+
+      const updatedGameState = await this.sessionRepository.findGameStateById(sessionId);
+      if (!updatedGameState) {
+        throw new SessionNotFoundError();
+      }
+
+      this.cache.set(sessionId, updatedGameState).catch(() => {});
+
+      this.sessionEvents?.emit(sessionId, 'quiz_started', {
+        questionId: question.id,
+        question: question.question,
+        answers: question.answers,
+        attackerId: userId,
+        defenderId,
+        figureId: result.figureId,
+        fromPosition: result.fromPosition,
+        toPosition: result.toPosition,
+      });
+
+      this.sessionEvents?.emit(sessionId, 'game_state', updatedGameState);
+
+      return {
+        figureId: result.figureId,
+        fromPosition: result.fromPosition,
+        toPosition: result.toPosition,
+        outcome: 'QUIZ_STARTED',
+        capturedFigureId: result.capturedFigureId,
+        rollAgain: false,
+        turnForfeit: false,
+        plagueFlyTransferred: false,
+        gameState: updatedGameState,
+        quiz: {
+          questionId: question.id,
+          question: question.question,
+          answers: question.answers,
+        },
+      };
     }
 
     await this.sessionRepository.applyMove({

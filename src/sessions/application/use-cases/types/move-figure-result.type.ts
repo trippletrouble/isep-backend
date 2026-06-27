@@ -11,4 +11,9 @@ export type MoveFigureResultType = {
   turnForfeit: boolean;
   plagueFlyTransferred: boolean;
   gameState: GameStateType;
+  quiz?: {
+    questionId: string;
+    question: string;
+    answers: { id: string; text: string }[];
+  };
 };

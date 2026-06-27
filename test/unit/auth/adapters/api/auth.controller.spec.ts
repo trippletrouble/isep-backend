@@ -1,7 +1,7 @@
 import { UnauthorizedException } from '@nestjs/common';
 
 jest.mock('src/common/config/app.config', () => ({
-  appConfig: { node_env: 'test' },
+  appConfig: { node_env: 'test', after_login_redirect_url: '/' },
 }));
 
 import { AuthController } from 'src/auth/adapters/api/auth.controller';

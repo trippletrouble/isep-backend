@@ -61,6 +61,7 @@ import {
   OnlyHostCanInviteError,
   InviteTokenExpiredError,
   ParticipantNotFoundError,
+  QuizInProgressError,
   GameStateType,
   DiceRollResultType,
   RollDiceRequestType,
@@ -293,6 +294,13 @@ export class SessionsController {
         });
       }
 
+      if (error instanceof QuizInProgressError) {
+        throw new ConflictException({
+          code: 'QUIZ_IN_PROGRESS',
+          message: error.message,
+        });
+      }
+
       throw error;
     }
   }
@@ -378,6 +386,13 @@ export class SessionsController {
       if (error instanceof InvalidSessionStatusError) {
         throw new ConflictException({
           code: 'INVALID_SESSION_STATUS',
+          message: error.message,
+        });
+      }
+
+      if (error instanceof QuizInProgressError) {
+        throw new ConflictException({
+          code: 'QUIZ_IN_PROGRESS',
           message: error.message,
         });
       }

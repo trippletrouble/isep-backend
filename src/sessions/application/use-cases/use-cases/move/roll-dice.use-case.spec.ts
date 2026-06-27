@@ -11,6 +11,7 @@ import {
   NotYourTurnError,
   SessionNotFoundError,
 } from '../../errors';
+import { LudoEngine, FlyDomainService } from '../../../../domain';
 
 describe('RollDiceUseCase', () => {
   let useCase: RollDiceUseCase;
@@ -18,6 +19,8 @@ describe('RollDiceUseCase', () => {
   let mockDiceClient: jest.Mocked<DiceClientPort>;
   let mockMoveCalculator: jest.Mocked<PossibleMoveCalculatorUseCase>;
   let mockCache: jest.Mocked<GameStateCacheService>;
+  let mockLudoEngine: jest.Mocked<LudoEngine>;
+  let mockFlyDomainService: jest.Mocked<FlyDomainService>;
 
   const playerId = 'player-1';
   const sessionId = 'session-123';
@@ -73,16 +76,36 @@ describe('RollDiceUseCase', () => {
       invalidate: jest.fn(),
     } as unknown as jest.Mocked<GameStateCacheService>;
 
+    mockLudoEngine = {
+      handleRoll: jest.fn().mockReturnValue({
+        consecutiveSixes: 0,
+        turnForfeit: false,
+        rollAgain: false,
+        possibleMoves: [{ figureId: 1, fromPosition: 0, toPosition: 3, capturesOpponent: false }],
+        hasMoves: true,
+      }),
+    } as unknown as jest.Mocked<LudoEngine>;
+
+    mockFlyDomainService = {
+      rollDebuff: jest.fn(),
+      applyDebuff: jest.fn(),
+      shouldRemoveFlyAfterDebuff: jest.fn(),
+      canAssignFly: jest.fn(),
+    } as unknown as jest.Mocked<FlyDomainService>;
+
     useCase = new RollDiceUseCase(
       mockSessionRepo,
       mockDiceClient,
       mockMoveCalculator,
       mockCache,
+      mockLudoEngine,
+      mockFlyDomainService,
     );
   });
 
   it('should call cache.set with updated game state after successful DB write', async () => {
     mockSessionRepo.findGameStateById
+      .mockResolvedValueOnce(mockGameState)
       .mockResolvedValueOnce(mockGameState)
       .mockResolvedValueOnce(updatedGameState);
 
@@ -106,6 +129,13 @@ describe('RollDiceUseCase', () => {
   });
 
   it('should not call cache.set when passTurn throws (no moves, pass-turn path)', async () => {
+    mockLudoEngine.handleRoll.mockReturnValueOnce({
+      consecutiveSixes: 0,
+      turnForfeit: false,
+      rollAgain: false,
+      possibleMoves: [],
+      hasMoves: false,
+    });
     mockMoveCalculator.calculate.mockReturnValue([]);
     mockSessionRepo.findGameStateById.mockResolvedValue(mockGameState);
     mockSessionRepo.passTurn.mockRejectedValue(new Error('DB passTurn error'));

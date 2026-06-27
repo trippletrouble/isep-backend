@@ -63,6 +63,13 @@ model Session {
   diceRolledThisTurn   Boolean          @default(false) @map("dice_rolled_this_turn")
   consecutiveSixes     Int              @default(0) @map("consecutive_sixes")
   winnerId             String?          @map("winner_id") @db.Uuid
+  pendingQuizQuestionId String?         @map("pending_quiz_question_id")
+  pendingQuizAttackerId String?          @map("pending_quiz_attacker_id") @db.Uuid
+  pendingQuizDefenderId String?          @map("pending_quiz_defender_id") @db.Uuid
+  pendingQuizFigureId   Int?             @map("pending_quiz_figure_id")
+  pendingQuizFromPos    Int?             @map("pending_quiz_from_pos")
+  pendingQuizToPos      Int?             @map("pending_quiz_to_pos")
+  pendingQuizDiceValue  Int?             @map("pending_quiz_dice_value")
   replayLogRef         String?          @map("replay_log_ref")
   startedAt            DateTime?        @map("started_at")
   finishedAt           DateTime?        @map("finished_at")
@@ -194,6 +201,7 @@ enum MoveOutcome {
   CAPTURED
   GOAL
   GAME_WON
+  QUIZ_STARTED
 }
 
 enum GameHistoryActionType {

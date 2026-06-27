@@ -24,6 +24,7 @@ import { SessionNotFoundError } from '../../application';
 import { NotFoundException } from '@nestjs/common';
 import { AuthService } from '../../../auth';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { SessionSseService } from '../../session-sse.service';
 
 describe('SessionsController', () => {
   let controller: SessionsController;
@@ -63,6 +64,7 @@ describe('SessionsController', () => {
         { provide: GetResultsUseCase, useValue: {} },
         { provide: GetHistoryUseCase, useValue: mockGetHistoryUseCase },
         { provide: AuthService, useValue: {} },
+        { provide: SessionSseService, useValue: { emitState: jest.fn().mockResolvedValue(undefined) } },
       ],
     }).compile();
 

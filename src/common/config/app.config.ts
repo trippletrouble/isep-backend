@@ -32,6 +32,15 @@ export const appConfig = {
 function validateEnv(key: string): string {
   const value = process.env[key];
   if (!value) {
+    if (process.env.NODE_ENV === 'test') {
+      if (key === 'AFTER_LOGIN_REDIRECT_URL') {
+        return '/';
+      }
+      if (key === 'NODE_ENV') {
+        return 'test';
+      }
+      return 'test-mock-value';
+    }
     throw new MissingEnvError(`Missing required env variable: ${key}`);
   }
   return value;
