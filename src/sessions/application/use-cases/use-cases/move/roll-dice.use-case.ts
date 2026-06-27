@@ -7,6 +7,7 @@ import {
   InvalidSessionStatusError,
   NotYourTurnError,
   SessionNotFoundError,
+  QuizInProgressError,
 } from '../../errors';
 import { DiceRollResultType } from '../../types';
 import { PossibleMoveCalculatorUseCase } from './possible-move-calculator.use-case';
@@ -33,6 +34,9 @@ export class RollDiceUseCase {
   ): Promise<DiceRollResultType> {
     const gameState = await this.sessionRepository.findGameStateById(sessionId);
     if (!gameState) throw new SessionNotFoundError();
+    if (gameState.status === 'QUIZ_PENDING') {
+      throw new QuizInProgressError();
+    }
     if (gameState.status !== 'IN_PROGRESS')
       throw new InvalidSessionStatusError();
     if (gameState.currentPlayerId !== playerId) throw new NotYourTurnError();

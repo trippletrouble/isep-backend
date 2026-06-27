@@ -10,15 +10,19 @@ import {
   InvalidSessionStatusError,
   NotYourTurnError,
   SessionNotFoundError,
+  QuizInProgressError,
 } from '../../errors';
-import { LudoEngine, MoveResult } from '../../../../domain';
+import { LudoEngine, MoveResult, FlyDomainService } from '../../../../domain';
+import { QuizClientPort } from '../../../../ports';
 
 describe('MoveFigureUseCase', () => {
   let useCase: MoveFigureUseCase;
   let mockSessionRepo: jest.Mocked<SessionRepositoryPort>;
+  let mockQuizClient: jest.Mocked<QuizClientPort>;
   let mockMoveCalculator: jest.Mocked<PossibleMoveCalculatorUseCase>;
   let mockCache: jest.Mocked<GameStateCacheService>;
   let mockLudoEngine: jest.Mocked<LudoEngine>;
+  let mockFlyDomainService: jest.Mocked<FlyDomainService>;
 
   const userId = 'player-1';
   const sessionId = 'session-123';
@@ -79,7 +83,17 @@ describe('MoveFigureUseCase', () => {
     mockSessionRepo = {
       findGameStateById: jest.fn(),
       applyMove: jest.fn().mockResolvedValue(undefined),
+      setPendingQuiz: jest.fn().mockResolvedValue(undefined),
+      clearPendingQuiz: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<SessionRepositoryPort>;
+
+    mockQuizClient = {
+      getRandomQuestion: jest.fn().mockResolvedValue({
+        id: 'q-1',
+        question: 'What is 2+2?',
+        answers: [{ id: '1', text: '4' }, { id: '2', text: '5' }],
+      }),
+    } as unknown as jest.Mocked<QuizClientPort>;
 
     mockMoveCalculator = {
       calculate: jest.fn().mockReturnValue([validMove]),
@@ -95,11 +109,17 @@ describe('MoveFigureUseCase', () => {
       applyMove: jest.fn().mockReturnValue(mockMoveResult),
     } as unknown as jest.Mocked<LudoEngine>;
 
+    mockFlyDomainService = {
+      resolveKick: jest.fn(),
+    } as unknown as jest.Mocked<FlyDomainService>;
+
     useCase = new MoveFigureUseCase(
       mockSessionRepo,
+      mockQuizClient,
       mockCache,
       mockLudoEngine,
       mockMoveCalculator,
+      mockFlyDomainService,
     );
   });
 
@@ -176,5 +196,69 @@ describe('MoveFigureUseCase', () => {
     await expect(
       useCase.execute(sessionId, userId, validRequest),
     ).rejects.toThrow(InvalidMoveError);
+  });
+
+  it('should trigger quiz duel when the move captures an opponent figure', async () => {
+    const oppUserId = 'opponent-player';
+    const initialGameState: GameStateType = {
+      ...mockGameState,
+      figures: [
+        { id: 1, playerId: userId, position: 0, status: 'ACTIVE' },
+        { id: 2, playerId: oppUserId, position: 3, status: 'ACTIVE' },
+      ],
+    };
+    const afterQuizGameState: GameStateType = {
+      ...initialGameState,
+      status: 'QUIZ_PENDING',
+    };
+
+    mockSessionRepo.findGameStateById
+      .mockResolvedValueOnce(initialGameState)
+      .mockResolvedValueOnce(afterQuizGameState);
+
+    mockMoveCalculator.calculate.mockReturnValue([
+      { figureId: 1, fromPosition: 0, toPosition: 3, capturesOpponent: true },
+    ]);
+
+    mockLudoEngine.applyMove.mockReturnValueOnce({
+      figureId: 1,
+      fromPosition: 0,
+      toPosition: 3,
+      outcome: 'CAPTURED',
+      capturedFigureId: 2,
+      rollAgain: true,
+      turnForfeit: false,
+    });
+
+    const result = await useCase.execute(sessionId, userId, validRequest);
+
+    expect(mockQuizClient.getRandomQuestion).toHaveBeenCalled();
+    expect(mockSessionRepo.setPendingQuiz).toHaveBeenCalledWith(sessionId, {
+      questionId: 'q-1',
+      attackerId: userId,
+      defenderId: oppUserId,
+      figureId: 1,
+      fromPosition: 0,
+      toPosition: 3,
+      diceValue: initialGameState.lastDiceValue,
+    });
+    expect(mockSessionRepo.applyMove).not.toHaveBeenCalled();
+    expect(result.outcome).toBe('QUIZ_STARTED');
+    expect(result.quiz).toEqual({
+      questionId: 'q-1',
+      question: 'What is 2+2?',
+      answers: [{ id: '1', text: '4' }, { id: '2', text: '5' }],
+    });
+  });
+
+  it('should throw QuizInProgressError when a move is attempted during QUIZ_PENDING', async () => {
+    mockSessionRepo.findGameStateById.mockResolvedValue({
+      ...mockGameState,
+      status: 'QUIZ_PENDING',
+    });
+
+    await expect(
+      useCase.execute(sessionId, userId, validRequest),
+    ).rejects.toThrow(QuizInProgressError);
   });
 });

@@ -39,7 +39,6 @@ describe('SessionsController', () => {
       getGameState: mockUseCase(),
       leaveSession: mockUseCase(),
       reconnect: mockUseCase(),
-      auth: mockUseCase(),
       rollDice: mockUseCase(),
       moveFigure: mockUseCase(),
       startSession: mockUseCase(),
@@ -54,19 +53,23 @@ describe('SessionsController', () => {
       getHistory: mockUseCase(),
     };
 
+    const mockSseService = {
+      emitState: jest.fn().mockResolvedValue(undefined),
+    };
+
     controller = new SessionsController(
       useCases.createSession as any,
       useCases.listOpenSessions as any,
       useCases.getGameState as any,
       useCases.leaveSession as any,
       useCases.reconnect as any,
-      useCases.auth as any,
       useCases.rollDice as any,
       useCases.moveFigure as any,
       useCases.startSession as any,
       useCases.getPossibleMoves as any,
       useCases.getLobby as any,
       useCases.updateLobbySettings as any,
+      mockSseService as any,
       useCases.deleteSession as any,
       useCases.getSessionPlayers as any,
       useCases.joinSession as any,
@@ -290,7 +293,7 @@ describe('SessionsController', () => {
   });
 
   it.each([
-    [new NotYourTurnError(), BadRequestException],
+    [new NotYourTurnError(), ForbiddenException],
     [new DiceAlreadyRolledError(), BadRequestException],
     [new SessionNotFoundError(), NotFoundException],
     [new InvalidSessionStatusError(), ConflictException],
@@ -397,11 +400,7 @@ describe('SessionsController', () => {
     const invite = { inviteToken: 'token' };
     useCases.generateInvite.execute.mockResolvedValue(invite);
 
-    await expect(controller.generateInvite('session-1', user)).resolves.toMatchObject({
-      status: 'success',
-      data: invite,
-      timestamp: expect.any(String),
-    });
+    await expect(controller.generateInvite('session-1', user)).resolves.toBe(invite);
   });
 
   it.each([

@@ -38,7 +38,7 @@ export class AuthController {
 
   @Get('session')
   async session(@Req() req: AuthRequest) {
-    const sub = req.cookies.session;
+    const sub = req.cookies?.session;
     if (!sub) throw new UnauthorizedException();
 
     const user = await this.authService.findByKeycloakSub(sub);

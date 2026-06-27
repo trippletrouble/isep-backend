@@ -7,4 +7,5 @@ export type SessionEventType =
   | 'game_ended'
   | 'heartbeat'
   | 'plague_fly_acquired'
-  | 'plague_fly_transferred';
+  | 'plague_fly_transferred'
+  | 'quiz_started';

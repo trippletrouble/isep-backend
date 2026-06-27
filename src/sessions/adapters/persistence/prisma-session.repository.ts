@@ -574,4 +574,49 @@ export class PrismaSessionRepository implements SessionRepositoryPort {
     });
     return updated.flyDebuffCount;
   }
+
+  async setPendingQuiz(
+    sessionId: string,
+    data: {
+      questionId: string;
+      attackerId: string;
+      defenderId: string;
+      figureId: number;
+      fromPosition: number;
+      toPosition: number;
+      diceValue: number;
+    },
+  ): Promise<void> {
+    await this.prisma.session.update({
+      where: { id: sessionId },
+      data: {
+        status: 'QUIZ_PENDING',
+        pendingQuizQuestionId: data.questionId,
+        pendingQuizAttackerId: data.attackerId,
+        pendingQuizDefenderId: data.defenderId,
+        pendingQuizFigureId: data.figureId,
+        pendingQuizFromPos: data.fromPosition,
+        pendingQuizToPos: data.toPosition,
+        pendingQuizDiceValue: data.diceValue,
+        updatedAt: new Date(),
+      },
+    });
+  }
+
+  async clearPendingQuiz(sessionId: string): Promise<void> {
+    await this.prisma.session.update({
+      where: { id: sessionId },
+      data: {
+        status: 'IN_PROGRESS',
+        pendingQuizQuestionId: null,
+        pendingQuizAttackerId: null,
+        pendingQuizDefenderId: null,
+        pendingQuizFigureId: null,
+        pendingQuizFromPos: null,
+        pendingQuizToPos: null,
+        pendingQuizDiceValue: null,
+        updatedAt: new Date(),
+      },
+    });
+  }
 }

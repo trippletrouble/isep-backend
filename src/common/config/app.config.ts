@@ -24,12 +24,23 @@ export const appConfig = {
 
   dice_service_url: validateEnv('DICE_SERVICE_URL'),
 
+  quiz_service_url: validateEnv('QUIZ_SERVICE_URL'),
+
   node_env: validateEnv('NODE_ENV'),
 };
 
 function validateEnv(key: string): string {
   const value = process.env[key];
   if (!value) {
+    if (process.env.NODE_ENV === 'test') {
+      if (key === 'AFTER_LOGIN_REDIRECT_URL') {
+        return '/';
+      }
+      if (key === 'NODE_ENV') {
+        return 'test';
+      }
+      return 'test-mock-value';
+    }
     throw new MissingEnvError(`Missing required env variable: ${key}`);
   }
   return value;

@@ -68,4 +68,19 @@ export abstract class SessionRepositoryPort {
     sessionId: string,
     figureId: number,
   ): Promise<number>;
+
+  abstract setPendingQuiz(
+    sessionId: string,
+    data: {
+      questionId: string;
+      attackerId: string;
+      defenderId: string;
+      figureId: number;
+      fromPosition: number;
+      toPosition: number;
+      diceValue: number;
+    },
+  ): Promise<void>;
+
+  abstract clearPendingQuiz(sessionId: string): Promise<void>;
 }
