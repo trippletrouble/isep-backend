@@ -5,4 +5,6 @@ export type SessionEventType =
   | 'move_executed'
   | 'turn_changed'
   | 'game_ended'
-  | 'heartbeat';
+  | 'heartbeat'
+  | 'plague_fly_acquired'
+  | 'plague_fly_transferred';

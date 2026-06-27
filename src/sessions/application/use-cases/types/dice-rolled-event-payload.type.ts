@@ -5,4 +5,5 @@ export type DiceRolledEventPayload = {
   rollAgain: boolean;
   consecutiveSixes: number;
   turnForfeit: boolean;
+  plagueFlyAcquired: boolean;
 };

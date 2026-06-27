@@ -5,6 +5,20 @@ import { MoveExecutedEventPayload } from './move-executed-event-payload.type';
 import { TurnChangedEventPayload } from './turn-changed-event-payload.type';
 import { DiceRolledEventPayload } from './dice-rolled-event-payload.type';
 
+export type PlagueFlyAcquiredPayload = {
+  figureId: number;
+  playerId: string;
+  activeFlyCount: number;
+};
+
+export type PlagueFlyTransferredPayload = {
+  fromFigureId: number;
+  toFigureId: number;
+  fromPlayerId: string;
+  toPlayerId: string;
+  activeFlyCount: number;
+};
+
 export type SessionEventPayloadMap = {
   game_state: GameStateType;
   game_started: GameStateType;
@@ -13,4 +27,6 @@ export type SessionEventPayloadMap = {
   turn_changed: TurnChangedEventPayload;
   game_ended: GameEndedEventPayload;
   heartbeat: HeartbeatEventPayload;
+  plague_fly_acquired: PlagueFlyAcquiredPayload; // ← neu
+  plague_fly_transferred: PlagueFlyTransferredPayload; // ← neu
 };

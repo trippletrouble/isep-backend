@@ -109,6 +109,8 @@ export class PrismaSessionRepository implements SessionRepositoryPort {
         playerId: figure.participant.userId,
         position: figure.position,
         status: figure.status,
+        hasPlagueFly: figure.hasPlagueFly,
+        flyDebuffCount: figure.flyDebuffCount,
       })),
       currentPlayerId: session.currentPlayerId,
       turnNumber: session.turnNumber,
@@ -116,6 +118,7 @@ export class PrismaSessionRepository implements SessionRepositoryPort {
       diceRolledThisTurn: session.diceRolledThisTurn,
       consecutiveSixes: session.consecutiveSixes,
       activeRules: session.additionalRules,
+      activeFlyCount: session.figures.filter((f) => f.hasPlagueFly).length,
       winnerId: session.winnerId,
       activeQuiz,
       createdAt: session.createdAt.toISOString(),
@@ -725,5 +728,27 @@ export class PrismaSessionRepository implements SessionRepositoryPort {
       diceValue: quizDuel.diceValue,
       createdAt: quizDuel.createdAt.toISOString(),
     };
+  }
+
+  async setFigureHasPlagueFly(
+    sessionId: string,
+    figureId: number,
+    value: boolean,
+  ): Promise<void> {
+    await this.prisma.figure.update({
+      where: { sessionId_id: { sessionId, id: figureId } },
+      data: { hasPlagueFly: value, flyDebuffCount: value ? 0 : undefined },
+    });
+  }
+
+  async incrementFlyDebuffCount(
+    sessionId: string,
+    figureId: number,
+  ): Promise<number> {
+    const updated = await this.prisma.figure.update({
+      where: { sessionId_id: { sessionId, id: figureId } },
+      data: { flyDebuffCount: { increment: 1 } },
+    });
+    return updated.flyDebuffCount;
   }
 }

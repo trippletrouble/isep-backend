@@ -77,5 +77,17 @@ export abstract class SessionRepositoryPort {
     captureProceeds: boolean;
   }): Promise<void>;
 
-  abstract findActiveQuizDuel(sessionId: string): Promise<ActiveQuizType | null>;
+  abstract findActiveQuizDuel(
+    sessionId: string,
+  ): Promise<ActiveQuizType | null>;
+
+  abstract setFigureHasPlagueFly(
+    sessionId: string,
+    figureId: number,
+    value: boolean,
+  ): Promise<void>;
+  abstract incrementFlyDebuffCount(
+    sessionId: string,
+    figureId: number,
+  ): Promise<number>;
 }

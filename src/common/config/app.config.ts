@@ -24,6 +24,8 @@ export const appConfig = {
 
   dice_service_url: validateEnv('DICE_SERVICE_URL'),
 
+  quiz_service_url: validateEnv('QUIZ_SERVICE_URL'),
+
   node_env: validateEnv('NODE_ENV'),
 };
 
