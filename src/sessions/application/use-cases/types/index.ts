@@ -20,3 +20,4 @@ export * from './session-event-type.type';
 export * from './session-with-participants.type';
 export * from './start-session-info.type';
 export * from './turn-changed-event-payload.type';
+export * from './quiz-resolved-event-payload.type';

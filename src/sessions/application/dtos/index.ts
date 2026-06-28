@@ -11,4 +11,5 @@ export * from './lobby-settings.dto';
 export * from './move-figure-request.dto';
 export * from './participant.dto';
 export * from './player-response.dto';
+export * from './submit-quiz-answer.request.dto';
 export * from './update-session.request.dto';
