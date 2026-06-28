@@ -133,6 +133,8 @@ export class MoveFigureUseCase {
         figureId: result.figureId,
         fromPosition: result.fromPosition,
         toPosition: result.toPosition,
+        category: question.category,
+        timeLimitSeconds: question.timeLimitSeconds,
       });
 
       this.sessionEvents?.emit(sessionId, 'game_state', updatedGameState);

@@ -52,8 +52,9 @@ export class SubmitQuizAnswerUseCase {
 
     const attackerId = session.pendingQuizAttackerId;
     const defenderId = session.pendingQuizDefenderId;
+    const questionId = session.pendingQuizQuestionId;
 
-    if (!attackerId || !defenderId) {
+    if (!attackerId || !defenderId || !questionId) {
       throw new NotInQuizError();
     }
 
@@ -80,6 +81,12 @@ export class SubmitQuizAnswerUseCase {
     }
 
     this.pendingAnswers.set(sessionId, pending);
+
+    this.sessionEvents?.emit(sessionId, 'quiz_answered', {
+      questionId,
+      playerId: userId,
+      role: isAttacker ? 'attacker' : 'defender',
+    });
 
     const bothAnswered =
       pending.attackerAnswer !== undefined &&
@@ -219,9 +226,11 @@ export class SubmitQuizAnswerUseCase {
     const updatedGameState =
       await this.sessionRepository.findGameStateById(sessionId);
 
-    if (updatedGameState) {
-      this.cache.set(sessionId, updatedGameState).catch(() => {});
+    if (!updatedGameState) {
+      throw new SessionNotFoundError();
     }
+
+    this.cache.set(sessionId, updatedGameState).catch(() => {});
 
     const result: QuizResolvedPayload = {
       winnerId,
@@ -234,17 +243,16 @@ export class SubmitQuizAnswerUseCase {
       captureExecuted: attackerWins,
       figureId,
       toPosition,
+      gameState: updatedGameState,
     };
 
     this.sessionEvents?.emit(sessionId, 'quiz_resolved', result);
 
-    if (updatedGameState) {
-      this.sessionEvents?.emit(sessionId, 'game_state', updatedGameState);
-      this.sessionEvents?.emit(sessionId, 'turn_changed', {
-        currentPlayerId: updatedGameState.currentPlayerId,
-        turnNumber: updatedGameState.turnNumber,
-      });
-    }
+    this.sessionEvents?.emit(sessionId, 'game_state', updatedGameState);
+    this.sessionEvents?.emit(sessionId, 'turn_changed', {
+      currentPlayerId: updatedGameState.currentPlayerId,
+      turnNumber: updatedGameState.turnNumber,
+    });
 
     return result;
   }

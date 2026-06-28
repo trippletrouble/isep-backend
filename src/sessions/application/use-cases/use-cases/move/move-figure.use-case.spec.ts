@@ -1,7 +1,7 @@
 import { MoveFigureUseCase } from './move-figure.use-case';
-import { SessionRepositoryPort } from '../../../../ports';
+import { QuizServicePort, SessionRepositoryPort } from '../../../../ports';
 import { PossibleMoveCalculatorUseCase } from './possible-move-calculator.use-case';
-import { GameStateCacheService } from '../../../services';
+import { GameStateCacheService, SessionEventsService } from '../../../services';
 import { GameStateFromPlayerType, GameStateType } from '../../types';
 import { MoveFigureRequestDto } from '../../../dtos';
 import {
@@ -13,16 +13,16 @@ import {
   QuizInProgressError,
 } from '../../errors';
 import { LudoEngine, MoveResult, FlyDomainService } from '../../../../domain';
-import { QuizClientPort } from '../../../../ports';
 
 describe('MoveFigureUseCase', () => {
   let useCase: MoveFigureUseCase;
   let mockSessionRepo: jest.Mocked<SessionRepositoryPort>;
-  let mockQuizClient: jest.Mocked<QuizClientPort>;
+  let mockQuizClient: jest.Mocked<QuizServicePort>;
   let mockMoveCalculator: jest.Mocked<PossibleMoveCalculatorUseCase>;
   let mockCache: jest.Mocked<GameStateCacheService>;
   let mockLudoEngine: jest.Mocked<LudoEngine>;
   let mockFlyDomainService: jest.Mocked<FlyDomainService>;
+  let mockSessionEvents: jest.Mocked<SessionEventsService>;
 
   const userId = 'player-1';
   const sessionId = 'session-123';
@@ -50,6 +50,7 @@ describe('MoveFigureUseCase', () => {
     diceRolledThisTurn: true,
     consecutiveSixes: 0,
     activeRules: [],
+    activeFlyCount: 0,
     winnerId: null,
     createdAt: '2026-06-15T12:00:00.000Z',
     lastUpdatedAt: '2026-06-15T12:00:00.000Z',
@@ -90,10 +91,17 @@ describe('MoveFigureUseCase', () => {
     mockQuizClient = {
       getRandomQuestion: jest.fn().mockResolvedValue({
         id: 'q-1',
+        category: 'math',
         question: 'What is 2+2?',
-        answers: [{ id: '1', text: '4' }, { id: '2', text: '5' }],
+        answerOptions: [
+          { id: '1', text: '4' },
+          { id: '2', text: '5' },
+        ],
+        correctAnswerId: '1',
+        timeLimitSeconds: 15,
       }),
-    } as unknown as jest.Mocked<QuizClientPort>;
+      getCorrectAnswerId: jest.fn().mockResolvedValue('1'),
+    } as unknown as jest.Mocked<QuizServicePort>;
 
     mockMoveCalculator = {
       calculate: jest.fn().mockReturnValue([validMove]),
@@ -113,6 +121,10 @@ describe('MoveFigureUseCase', () => {
       resolveKick: jest.fn(),
     } as unknown as jest.Mocked<FlyDomainService>;
 
+    mockSessionEvents = {
+      emit: jest.fn(),
+    } as unknown as jest.Mocked<SessionEventsService>;
+
     useCase = new MoveFigureUseCase(
       mockSessionRepo,
       mockQuizClient,
@@ -120,6 +132,7 @@ describe('MoveFigureUseCase', () => {
       mockLudoEngine,
       mockMoveCalculator,
       mockFlyDomainService,
+      mockSessionEvents,
     );
   });
 
@@ -247,8 +260,30 @@ describe('MoveFigureUseCase', () => {
     expect(result.quiz).toEqual({
       questionId: 'q-1',
       question: 'What is 2+2?',
-      answers: [{ id: '1', text: '4' }, { id: '2', text: '5' }],
+      answers: [
+        { id: '1', text: '4' },
+        { id: '2', text: '5' },
+      ],
     });
+    expect(mockSessionEvents.emit).toHaveBeenCalledWith(
+      sessionId,
+      'quiz_started',
+      {
+        questionId: 'q-1',
+        question: 'What is 2+2?',
+        answers: [
+          { id: '1', text: '4' },
+          { id: '2', text: '5' },
+        ],
+        attackerId: userId,
+        defenderId: oppUserId,
+        figureId: 1,
+        fromPosition: 0,
+        toPosition: 3,
+        category: 'math',
+        timeLimitSeconds: 15,
+      },
+    );
   });
 
   it('should throw QuizInProgressError when a move is attempted during QUIZ_PENDING', async () => {

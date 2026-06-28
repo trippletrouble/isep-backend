@@ -9,4 +9,5 @@ export type SessionEventType =
   | 'plague_fly_acquired'
   | 'plague_fly_transferred'
   | 'quiz_started'
+  | 'quiz_answered'
   | 'quiz_resolved';

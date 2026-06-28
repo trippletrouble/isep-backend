@@ -29,6 +29,14 @@ export type QuizStartedPayload = {
   figureId: number;
   fromPosition: number;
   toPosition: number;
+  category: string;
+  timeLimitSeconds: number;
+};
+
+export type QuizAnsweredPayload = {
+  questionId: string;
+  playerId: string;
+  role: 'attacker' | 'defender';
 };
 
 export type SessionEventPayloadMap = {
@@ -42,5 +50,6 @@ export type SessionEventPayloadMap = {
   plague_fly_acquired: PlagueFlyAcquiredPayload; // ← neu
   plague_fly_transferred: PlagueFlyTransferredPayload; // ← neu
   quiz_started: QuizStartedPayload;
+  quiz_answered: QuizAnsweredPayload;
   quiz_resolved: QuizResolvedPayload;
 };

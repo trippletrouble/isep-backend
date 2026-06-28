@@ -1,7 +1,7 @@
 import { HttpQuizServiceAdapter } from './http-quiz-service.adapter';
-import { QuizValidationResult } from '../../ports';
+import { QuizQuestion } from '../../ports';
 
-// Mock für appConfig
+// Mock fuer appConfig
 jest.mock('@common', () => ({
   appConfig: {
     quiz_service_url: 'http://localhost:3101',
@@ -10,6 +10,18 @@ jest.mock('@common', () => ({
 
 describe('HttpQuizServiceAdapter', () => {
   let adapter: HttpQuizServiceAdapter;
+
+  const quizQuestion: QuizQuestion = {
+    id: 'q1',
+    category: 'general',
+    question: 'What is correct?',
+    answerOptions: [
+      { id: 'a1', text: 'Correct answer' },
+      { id: 'a2', text: 'Wrong answer' },
+    ],
+    correctAnswerId: 'a1',
+    timeLimitSeconds: 30,
+  };
 
   beforeEach(() => {
     adapter = new HttpQuizServiceAdapter();
@@ -20,63 +32,62 @@ describe('HttpQuizServiceAdapter', () => {
     jest.clearAllMocks();
   });
 
-  describe('validateAnswer', () => {
-    const questionId = 'q1';
-    const correctAnswerId = 'a1';
-
-    it('should send answer to quiz service and return correct validation result', async () => {
-      const mockValidationResponse: QuizValidationResult = {
-        correct: true,
-        correctAnswerId: 'a1',
-      };
-
+  describe('getRandomQuestion', () => {
+    it('should fetch a random question from the quiz service', async () => {
       (global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(mockValidationResponse),
+        json: () => Promise.resolve(quizQuestion),
       });
 
-      const result = await adapter.validateAnswer(questionId, correctAnswerId);
+      const result = await adapter.getRandomQuestion();
 
-      expect(result).toEqual({
-        correct: true,
-        correctAnswerId: 'a1',
-      });
-
+      expect(result).toEqual(quizQuestion);
       expect(global.fetch).toHaveBeenCalledWith(
-        'http://localhost:3101/quiz/validate',
+        'http://localhost:3101/quiz/random',
         expect.objectContaining({
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            questionId,
-            answerOptionId: correctAnswerId,
-          }),
+          method: 'GET',
           signal: expect.any(AbortSignal),
         }),
       );
     });
 
-    it('should return null on validation service error', async () => {
+    it('should return null on quiz service error', async () => {
       (global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: false,
         status: 500,
       });
 
-      const result = await adapter.validateAnswer(questionId, correctAnswerId);
-
-      expect(result).toBeNull();
+      await expect(adapter.getRandomQuestion()).resolves.toBeNull();
     });
 
-    it('should return null on validation network error', async () => {
+    it('should return null on quiz service network error', async () => {
       (global.fetch as jest.Mock).mockRejectedValueOnce(
         new TypeError('Failed to fetch'),
       );
 
-      const result = await adapter.validateAnswer(questionId, correctAnswerId);
+      await expect(adapter.getRandomQuestion()).resolves.toBeNull();
+    });
+  });
+
+  describe('getCorrectAnswerId', () => {
+    it('should return the correct answer id from the cached question', async () => {
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(quizQuestion),
+      });
+
+      await adapter.getRandomQuestion();
+      const result = await adapter.getCorrectAnswerId('q1');
+
+      expect(result).toBe('a1');
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('should return null when the question is not cached', async () => {
+      const result = await adapter.getCorrectAnswerId('unknown-question');
 
       expect(result).toBeNull();
+      expect(global.fetch).not.toHaveBeenCalled();
     });
   });
 });
