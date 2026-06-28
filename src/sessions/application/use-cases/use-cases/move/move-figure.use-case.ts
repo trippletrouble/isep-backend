@@ -70,12 +70,16 @@ export class MoveFigureUseCase {
       throw new InvalidMoveError();
     }
 
+    const figure = gameState.figures.find((f) => f.id === request.figureId)!;
+    const effectiveDiceValue =
+      gameState.lastDiceValue - (figure.flyDebuffCount ?? 0);
+
     let result: MoveResult;
     try {
       result = this.ludoEngine.applyMove(
         gameState,
         request.figureId,
-        gameState.lastDiceValue,
+        effectiveDiceValue,
       );
     } catch {
       throw new InvalidMoveError();
