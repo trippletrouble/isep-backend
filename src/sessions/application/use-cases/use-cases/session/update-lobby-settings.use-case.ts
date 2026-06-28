@@ -1,8 +1,8 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { SessionRepositoryPort } from '../../../../ports';
 import { LobbySettings } from '../../../../domain';
 import { LobbySettingsDto } from '../../../dtos';
-import { GameStateCacheService } from '../../../services';
+import { GameStateCacheService, SessionEventsService } from '../../../services';
 import {
   InvalidSessionStatusError,
   NotHostError,
@@ -15,6 +15,8 @@ export class UpdateLobbySettingsUseCase {
     @Inject(SessionRepositoryPort)
     private readonly sessionRepo: SessionRepositoryPort,
     private readonly cache: GameStateCacheService,
+    @Optional()
+    private readonly sessionEvents?: SessionEventsService,
   ) {}
 
   async execute(
@@ -49,6 +51,10 @@ export class UpdateLobbySettingsUseCase {
     });
 
     this.cache.invalidate(sessionId).catch(() => {});
+
+    this.sessionEvents?.emit(sessionId, 'lobby_updated', {
+      reason: 'settings_changed',
+    });
 
     return new LobbySettingsDto(
       updated.numberOfPlayers,

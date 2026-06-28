@@ -19,14 +19,19 @@ export type PlagueFlyTransferredPayload = {
   activeFlyCount: number;
 };
 
+export type LobbyUpdateType = {
+  reason?: 'player_joined' | 'player_left' | 'settings_changed';
+};
+
 export type SessionEventPayloadMap = {
   game_state: GameStateType;
+  lobby_updated: LobbyUpdateType;
   game_started: GameStateType;
   dice_rolled: DiceRolledEventPayload;
   move_executed: MoveExecutedEventPayload;
   turn_changed: TurnChangedEventPayload;
   game_ended: GameEndedEventPayload;
   heartbeat: HeartbeatEventPayload;
-  plague_fly_acquired: PlagueFlyAcquiredPayload; // ← neu
-  plague_fly_transferred: PlagueFlyTransferredPayload; // ← neu
+  plague_fly_acquired: PlagueFlyAcquiredPayload;
+  plague_fly_transferred: PlagueFlyTransferredPayload;
 };
