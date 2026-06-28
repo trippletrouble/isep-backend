@@ -4,6 +4,7 @@ import { HeartbeatEventPayload } from './heartbeat-event-payload.type';
 import { MoveExecutedEventPayload } from './move-executed-event-payload.type';
 import { TurnChangedEventPayload } from './turn-changed-event-payload.type';
 import { DiceRolledEventPayload } from './dice-rolled-event-payload.type';
+import { QuizResolvedPayload } from './quiz-resolved-event-payload.type';
 
 export type PlagueFlyAcquiredPayload = {
   figureId: number;
@@ -41,4 +42,5 @@ export type SessionEventPayloadMap = {
   plague_fly_acquired: PlagueFlyAcquiredPayload; // ← neu
   plague_fly_transferred: PlagueFlyTransferredPayload; // ← neu
   quiz_started: QuizStartedPayload;
+  quiz_resolved: QuizResolvedPayload;
 };

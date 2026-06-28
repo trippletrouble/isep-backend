@@ -3,7 +3,6 @@ import { PrismaModule } from '../prisma';
 import {
   SessionRepositoryPort,
   DiceClientPort,
-  QuizClientPort,
   QuizServicePort,
 } from './ports';
 import {
@@ -12,7 +11,6 @@ import {
   PrismaSessionRepository,
   HttpDiceClientAdapter,
   HttpQuizServiceAdapter,
-  HttpQuizClientAdapter,
 } from './adapters';
 import {
   CreateSessionUseCase,
@@ -35,6 +33,7 @@ import {
   SessionEventsService,
   GameStateCacheService,
   PossibleMoveCalculatorUseCase,
+  SubmitQuizAnswerUseCase,
 } from './application';
 import { AuthModule } from '../auth';
 import { FlyDomainService, LudoEngine } from './domain';
@@ -81,6 +80,7 @@ import { SessionSseService } from './session-sse.service';
     SessionEventsService,
     SessionSseService,
     FlyDomainService,
+    SubmitQuizAnswerUseCase,
     {
       provide: SessionRepositoryPort,
       useClass: PrismaSessionRepository,
@@ -90,17 +90,13 @@ import { SessionSseService } from './session-sse.service';
       useClass: HttpDiceClientAdapter,
     },
     {
-      provide: QuizClientPort,
-      useClass: HttpQuizClientAdapter,
-    },
-    {
       provide: QuizServicePort,
       useClass: HttpQuizServiceAdapter,
     },
   ],
   exports: [
     SessionRepositoryPort,
-    QuizClientPort,
+    QuizServicePort,
     StartSessionUseCase,
     CreateSessionUseCase,
     ListOpenSessionsUseCase,
@@ -119,6 +115,7 @@ import { SessionSseService } from './session-sse.service';
     GetResultsUseCase,
     SessionEventsService,
     GameStateCacheService,
+    SubmitQuizAnswerUseCase,
   ],
 })
 export class SessionModule {}

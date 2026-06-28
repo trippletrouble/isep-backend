@@ -1,6 +1,7 @@
 import { MoveFigureRequestDto } from '../../../dtos';
 import { Inject, Injectable, Optional } from '@nestjs/common';
-import { SessionRepositoryPort, QuizClientPort } from '../../../../ports';
+import { SessionRepositoryPort, QuizServicePort } from '../../../../ports';
+import { SubmitQuizAnswerUseCase } from './submit-quiz-answer.use-case';
 import { PossibleMoveCalculatorUseCase } from './possible-move-calculator.use-case';
 import {
   LudoEngine,
@@ -26,14 +27,16 @@ export class MoveFigureUseCase {
   constructor(
     @Inject(SessionRepositoryPort)
     private readonly sessionRepository: SessionRepositoryPort,
-    @Inject(QuizClientPort)
-    private readonly quizClient: QuizClientPort,
+    @Inject(QuizServicePort)
+    private readonly quizClient: QuizServicePort,
     private readonly cache: GameStateCacheService,
     private readonly ludoEngine: LudoEngine,
     private readonly possibleMoveCalculator: PossibleMoveCalculatorUseCase,
     private readonly flyDomainService: FlyDomainService,
     @Optional()
     private readonly sessionEvents?: SessionEventsService,
+    @Optional()
+    private readonly submitQuizAnswerUseCase?: SubmitQuizAnswerUseCase,
   ) {}
 
   async execute(
@@ -93,6 +96,9 @@ export class MoveFigureUseCase {
 
     if (result.capturedFigureId !== null) {
       const question = await this.quizClient.getRandomQuestion();
+      if (!question) {
+        throw new Error('Failed to fetch quiz question');
+      }
       const defenderFigure = gameState.figures.find((f) => f.id === result.capturedFigureId);
       if (!defenderFigure) {
         throw new Error('Defender figure not found');
@@ -109,6 +115,8 @@ export class MoveFigureUseCase {
         diceValue: gameState.lastDiceValue,
       });
 
+      this.submitQuizAnswerUseCase?.startQuizTimer(sessionId);
+
       const updatedGameState = await this.sessionRepository.findGameStateById(sessionId);
       if (!updatedGameState) {
         throw new SessionNotFoundError();
@@ -119,7 +127,7 @@ export class MoveFigureUseCase {
       this.sessionEvents?.emit(sessionId, 'quiz_started', {
         questionId: question.id,
         question: question.question,
-        answers: question.answers,
+        answers: question.answerOptions,
         attackerId: userId,
         defenderId,
         figureId: result.figureId,
@@ -142,7 +150,7 @@ export class MoveFigureUseCase {
         quiz: {
           questionId: question.id,
           question: question.question,
-          answers: question.answers,
+          answers: question.answerOptions,
         },
       };
     }

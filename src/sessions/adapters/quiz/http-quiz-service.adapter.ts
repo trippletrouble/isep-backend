@@ -90,4 +90,9 @@ export class HttpQuizServiceAdapter extends QuizServicePort {
       timeLimitSeconds: obj.timeLimitSeconds,
     };
   }
+
+  async getCorrectAnswerId(questionId: string): Promise<string | null> {
+    const cached = this.questionCache.get(questionId);
+    return cached?.correctAnswerId ?? null;
+  }
 }
