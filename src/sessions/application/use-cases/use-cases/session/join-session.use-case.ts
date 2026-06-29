@@ -1,6 +1,6 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { SessionRepositoryPort } from '../../../../ports';
-import { GameStateCacheService } from '../../../services';
+import { GameStateCacheService, SessionEventsService } from '../../../services';
 import {
   SessionNotFoundError,
   InvalidSessionStatusError,
@@ -19,6 +19,8 @@ export class JoinSessionUseCase {
     @Inject(SessionRepositoryPort)
     private readonly sessionRepo: SessionRepositoryPort,
     private readonly cache: GameStateCacheService,
+    @Optional()
+    private readonly sessionEvents?: SessionEventsService,
   ) {}
 
   async execute(
@@ -71,8 +73,8 @@ export class JoinSessionUseCase {
     } else {
       const allColors = [
         PlayerColor.RED,
-        PlayerColor.BLUE,
         PlayerColor.YELLOW,
+        PlayerColor.BLUE,
         PlayerColor.GREEN,
       ];
       const availableColor = allColors.find((c) => !takenColors.includes(c));
@@ -104,6 +106,10 @@ export class JoinSessionUseCase {
     if (!gameState) throw new SessionNotFoundError();
 
     this.cache.set(sessionId, gameState).catch(() => {});
+
+    this.sessionEvents?.emit(sessionId, 'lobby_updated', {
+      reason: 'player_joined',
+    });
 
     return gameState;
   }
