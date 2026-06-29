@@ -19,6 +19,7 @@ import { MoveFigureResultType } from '../../types';
 import { SessionEventsService } from '../../../services';
 import { MoveOutcomeType } from '@common';
 import { FlyDomainService } from '../../../../domain';
+import { FlyDebuffCacheService } from '../../../services';
 
 @Injectable()
 export class MoveFigureUseCase {
@@ -29,6 +30,7 @@ export class MoveFigureUseCase {
     private readonly ludoEngine: LudoEngine,
     private readonly possibleMoveCalculator: PossibleMoveCalculatorUseCase,
     private readonly flyDomainService: FlyDomainService,
+    private readonly flyDebuffCache: FlyDebuffCacheService,
     @Optional()
     private readonly sessionEvents?: SessionEventsService,
   ) {}
@@ -39,54 +41,65 @@ export class MoveFigureUseCase {
     request: MoveFigureRequestDto,
   ): Promise<MoveFigureResultType> {
     const gameState = await this.sessionRepository.findGameStateById(sessionId);
-    if (!gameState) {
-      throw new SessionNotFoundError();
-    }
-
-    if (gameState.status !== 'IN_PROGRESS') {
+    if (!gameState) throw new SessionNotFoundError();
+    if (gameState.status !== 'IN_PROGRESS')
       throw new InvalidSessionStatusError();
-    }
-
-    if (gameState.currentPlayerId !== userId) {
-      throw new NotYourTurnError();
-    }
-
-    if (!gameState.diceRolledThisTurn || gameState.lastDiceValue === null) {
+    if (gameState.currentPlayerId !== userId) throw new NotYourTurnError();
+    if (!gameState.diceRolledThisTurn || gameState.lastDiceValue === null)
       throw new DiceNotRolledError();
-    }
+
+    // Gecachten flyDebuffMap vom Würfeln laden
+    const flyDebuffMap = await this.flyDebuffCache.get(sessionId);
 
     const possibleMoves = this.possibleMoveCalculator.calculate(
       gameState,
       userId,
       gameState.lastDiceValue,
+      flyDebuffMap,
     );
+
     const selectedMove = possibleMoves.find(
       (move) =>
         move.figureId === request.figureId &&
         move.toPosition === request.toPosition,
     );
 
-    if (!selectedMove) {
-      throw new InvalidMoveError();
-    }
+    if (!selectedMove) throw new InvalidMoveError();
 
-    const figure = gameState.figures.find((f) => f.id === request.figureId)!;
-    const effectiveDiceValue =
-      gameState.lastDiceValue - (figure.flyDebuffCount ?? 0);
-
-    let result: MoveResult;
-    try {
-      result = this.ludoEngine.applyMove(
-        gameState,
-        request.figureId,
-        effectiveDiceValue,
+    let capturedFigureId: number | null = null;
+    if (selectedMove.capturesOpponent) {
+      const oppFigure = gameState.figures.find(
+        (f) => f.playerId !== userId && f.position === selectedMove.toPosition,
       );
-    } catch {
-      throw new InvalidMoveError();
+      if (oppFigure) capturedFigureId = oppFigure.id;
     }
-    if (result.toPosition !== request.toPosition) {
-      throw new InvalidMoveError();
+
+    let outcome: MoveOutcomeType = 'MOVED';
+    if (selectedMove.capturesOpponent) {
+      outcome = 'CAPTURED';
+    } else if (isFinalGoalPosition(selectedMove.toPosition)) {
+      const ownFigures = gameState.figures.filter((f) => f.playerId === userId);
+      const allInGoal = ownFigures.every((f) =>
+        f.id === request.figureId ? true : isFinalGoalPosition(f.position),
+      );
+      outcome = allInGoal ? 'GAME_WON' : 'GOAL';
     }
+
+    const rollAgain =
+      outcome !== 'GAME_WON' &&
+      (selectedMove.capturesOpponent ||
+        (gameState.lastDiceValue === 6 &&
+          gameState.activeRules.includes('THROW_AGAIN_ON_6')));
+
+    const result: MoveResult = {
+      figureId: selectedMove.figureId,
+      fromPosition: selectedMove.fromPosition,
+      toPosition: selectedMove.toPosition,
+      outcome,
+      capturedFigureId,
+      rollAgain,
+      turnForfeit: false,
+    };
 
     await this.sessionRepository.applyMove({
       sessionId,
@@ -100,6 +113,9 @@ export class MoveFigureUseCase {
       rollAgain: result.rollAgain,
       turnForfeit: result.turnForfeit,
     });
+
+    // Cache invalidieren nach dem Move
+    await this.flyDebuffCache.invalidate(sessionId);
 
     let plagueFlyTransferred = false;
 
@@ -168,10 +184,7 @@ export class MoveFigureUseCase {
 
     const updatedGameState =
       await this.sessionRepository.findGameStateById(sessionId);
-
-    if (!updatedGameState) {
-      throw new SessionNotFoundError();
-    }
+    if (!updatedGameState) throw new SessionNotFoundError();
 
     this.cache.set(sessionId, updatedGameState).catch(() => {});
 
@@ -198,7 +211,6 @@ export class MoveFigureUseCase {
       });
     }
 
-    // Alle Clients mit vollem GameState versorgen — Figurenpositionen, diceRolledThisTurn etc.
     this.sessionEvents?.emit(sessionId, 'game_state', updatedGameState);
 
     if (
@@ -237,19 +249,15 @@ export class MoveFigureUseCase {
     toPosition: number,
     capturesOpponent: boolean,
   ): MoveOutcomeType {
-    if (capturesOpponent) {
-      return 'CAPTURED';
-    }
+    if (capturesOpponent) return 'CAPTURED';
     if (isFinalGoalPosition(toPosition)) {
       const allFiguresInGoal = ownFigures.every((figure) =>
         figure.id !== movedFigureId
           ? isFinalGoalPosition(figure.position) || figure.status === 'GOAL'
           : true,
       );
-
       return allFiguresInGoal ? 'GAME_WON' : 'GOAL';
     }
-
     return 'MOVED';
   }
 }

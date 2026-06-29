@@ -1,7 +1,11 @@
 import { Inject, Injectable, Optional } from '@nestjs/common';
 import { SessionRepositoryPort, DiceClientPort } from '../../../../ports';
 import { LudoEngine } from '../../../../domain';
-import { GameStateCacheService, SessionEventsService } from '../../../services';
+import {
+  GameStateCacheService,
+  SessionEventsService,
+  FlyDebuffCacheService,
+} from '../../../services';
 import {
   DiceAlreadyRolledError,
   InvalidSessionStatusError,
@@ -21,6 +25,7 @@ export class RollDiceUseCase {
     private readonly diceClient: DiceClientPort,
     private readonly possibleMoveCalculator: PossibleMoveCalculatorUseCase,
     private readonly cache: GameStateCacheService,
+    private readonly flyDebuffCache: FlyDebuffCacheService,
     private readonly ludoEngine: LudoEngine,
     private readonly flyDomainService: FlyDomainService,
     @Optional()
@@ -42,6 +47,7 @@ export class RollDiceUseCase {
     const flyActive = gameState.activeRules.includes('PLAGUE_FLY');
 
     const flyDebuffMap = new Map<number, number>();
+
     let plagueFlyAcquired = false;
     let acquiredFigureId: number | undefined;
 
@@ -52,10 +58,6 @@ export class RollDiceUseCase {
 
       for (const figure of playerFigures) {
         if (!figure.hasPlagueFly) continue;
-
-        const debuff = this.flyDomainService.rollDebuff();
-        const effectiveDice = this.flyDomainService.applyDebuff(value, debuff);
-        flyDebuffMap.set(figure.id, effectiveDice);
 
         const newDebuffCount = figure.flyDebuffCount + 1;
         await this.sessionRepository.incrementFlyDebuffCount(
@@ -69,7 +71,12 @@ export class RollDiceUseCase {
             figure.id,
             false,
           );
+          continue;
         }
+
+        const debuff = this.flyDomainService.rollDebuff();
+        const effectiveDice = this.flyDomainService.applyDebuff(value, debuff);
+        flyDebuffMap.set(figure.id, effectiveDice);
       }
 
       if (value === 1) {
@@ -91,6 +98,7 @@ export class RollDiceUseCase {
         }
       }
     }
+    await this.flyDebuffCache.set(sessionId, flyDebuffMap);
 
     const freshState =
       await this.sessionRepository.findGameStateById(sessionId);

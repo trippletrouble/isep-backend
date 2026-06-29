@@ -28,6 +28,7 @@ import {
   SessionEventsService,
   GameStateCacheService,
   PossibleMoveCalculatorUseCase,
+  FlyDebuffCacheService,
 } from './application';
 import { AuthModule } from '../auth';
 import { FlyDomainService, LudoEngine } from './domain';
@@ -73,6 +74,7 @@ import { SessionSseService } from './session-sse.service';
     SessionEventsService,
     SessionSseService,
     FlyDomainService,
+    FlyDebuffCacheService,
     {
       provide: SessionRepositoryPort,
       useClass: PrismaSessionRepository,

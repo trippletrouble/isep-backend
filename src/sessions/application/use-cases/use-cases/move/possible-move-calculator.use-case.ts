@@ -37,7 +37,7 @@ export class PossibleMoveCalculatorUseCase {
 
     return ownFigures
       .map((figure) => {
-        const effectiveDice = flyDebuffMap?.get(figure.id) ?? diceValue; // ← neu
+        const effectiveDice = flyDebuffMap?.get(figure.id) ?? diceValue;
         return this.calculateMoveForFigure(
           figure,
           player,
