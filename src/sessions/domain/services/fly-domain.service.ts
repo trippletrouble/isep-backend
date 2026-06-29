@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { GameStateFigureType } from '../../application/use-cases/types';
+import { GameStateFigureType } from '../../application';
+import {
+  GOAL_LANE_SIZE,
+  GOAL_START_FIELDS,
+  isFinalGoalPosition,
+} from '../model';
 
 const MAX_FLIES = 3;
 const MAX_DEBUFFS = 3;
@@ -10,6 +15,14 @@ export class FlyDomainService {
     if (activeFlyCount >= MAX_FLIES) return false;
     if (figure.hasPlagueFly) return false;
     if (figure.position === -1) return false;
+    if (figure.status === 'GOAL') return false;
+    if (isFinalGoalPosition(figure.position)) return false;
+    const goalStartPositions = Object.values(GOAL_START_FIELDS);
+    const isInGoalLane = goalStartPositions.some(
+      (start) =>
+        figure.position >= start && figure.position < start + GOAL_LANE_SIZE,
+    );
+    if (isInGoalLane) return false;
     return true;
   }
 
