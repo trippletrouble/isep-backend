@@ -34,6 +34,7 @@ import {
   GameStateCacheService,
   PossibleMoveCalculatorUseCase,
   SubmitQuizAnswerUseCase,
+  FlyDebuffCacheService,
 } from './application';
 import { AuthModule } from '../auth';
 import { FlyDomainService, LudoEngine } from './domain';
@@ -80,6 +81,7 @@ import { SessionSseService } from './session-sse.service';
     SessionEventsService,
     SessionSseService,
     FlyDomainService,
+    FlyDebuffCacheService,
     SubmitQuizAnswerUseCase,
     {
       provide: SessionRepositoryPort,
