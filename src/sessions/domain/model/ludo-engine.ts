@@ -223,6 +223,7 @@ export class LudoEngine implements ILudoEngine {
     session: GameStateType,
     figureId: number,
     diceValue: number,
+    flyDebuffMap?: Map<number, number>,
   ): MoveResult {
     const playerId = session.currentPlayerId;
     if (!playerId) {
@@ -243,7 +244,12 @@ export class LudoEngine implements ILudoEngine {
       );
     }
 
-    const possibleMoves = this.getPossibleMoves(session, playerId, diceValue);
+    const possibleMoves = this.getPossibleMoves(
+      session,
+      playerId,
+      diceValue,
+      flyDebuffMap,
+    );
     const selectedMove = possibleMoves.find((m) => m.figureId === figureId);
     if (!selectedMove) {
       throw new Error('Invalid move');

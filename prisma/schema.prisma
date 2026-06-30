@@ -81,6 +81,7 @@ model Session {
   participants  GameParticipant[]
   figures       Figure[]
   historyEvents GameHistoryEvent[]
+  quizDuels     QuizDuel[]
 
   @@index([status])
   @@index([hostId])
@@ -107,6 +108,8 @@ model GameParticipant {
   user          User               @relation(fields: [userId], references: [id])
   figures       Figure[]
   historyEvents GameHistoryEvent[]
+  quizDuelsAsAttacker QuizDuel[] @relation("QuizDuelAttacker")
+  quizDuelsAsDefender QuizDuel[] @relation("QuizDuelDefender")
 
   @@unique([sessionId, userId])
   @@unique([sessionId, color])
@@ -219,4 +222,44 @@ enum ThemePreference {
 enum UserRole {
   PLAYER
   ADMIN
+}
+
+enum QuizDuelStatus {
+  PENDING
+  RESOLVED
+}
+
+enum QuizDuelOutcome {
+  ATTACKER_WIN
+  DEFENDER_WIN
+  DRAW
+}
+
+model QuizDuel {
+  id              String          @id @default(uuid()) @db.Uuid
+  sessionId       String          @map("session_id") @db.Uuid
+  attackerId      String          @map("attacker_id") @db.Uuid
+  defenderId      String          @map("defender_id") @db.Uuid
+  questionId      String          @map("question_id")
+  status          QuizDuelStatus  @default(PENDING)
+  outcome         QuizDuelOutcome?
+  attackerAnswer  String?         @map("attacker_answer")
+  defenderAnswer  String?         @map("defender_answer")
+  attackerCorrect Boolean?        @map("attacker_correct")
+  defenderCorrect Boolean?        @map("defender_correct")
+  timeLimitSeconds Int            @default(30) @map("time_limit_seconds")
+  pendingFigureId Int             @map("pending_figure_id")
+  pendingFromPos  Int             @map("pending_from_pos")
+  pendingToPos    Int             @map("pending_to_pos")
+  diceValue       Int             @map("dice_value")
+  createdAt       DateTime        @default(now()) @map("created_at")
+  resolvedAt      DateTime?       @map("resolved_at")
+
+  session  Session         @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  attacker GameParticipant @relation("QuizDuelAttacker", fields: [attackerId], references: [id])
+  defender GameParticipant @relation("QuizDuelDefender", fields: [defenderId], references: [id])
+
+  @@index([sessionId])
+  @@index([sessionId, status])
+  @@map("quiz_duels")
 }

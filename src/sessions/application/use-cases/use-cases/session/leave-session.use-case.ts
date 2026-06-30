@@ -1,6 +1,6 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { SessionRepositoryPort } from '../../../../ports';
-import { GameStateCacheService } from '../../../services';
+import { GameStateCacheService, SessionEventsService } from '../../../services';
 import { SessionNotFoundError, ParticipantNotFoundError } from '../../errors';
 
 @Injectable()
@@ -11,6 +11,8 @@ export class LeaveSessionUseCase {
     @Inject(SessionRepositoryPort)
     private readonly sessionRepo: SessionRepositoryPort,
     private readonly cache: GameStateCacheService,
+    @Optional()
+    private readonly sessionEvents?: SessionEventsService,
   ) {}
 
   async execute(sessionId: string, userId: string): Promise<void> {
@@ -40,6 +42,9 @@ export class LeaveSessionUseCase {
         });
       }
       this.cache.invalidate(sessionId).catch(() => {});
+      this.sessionEvents?.emit(sessionId, 'lobby_updated', {
+        reason: 'player_left',
+      });
     } else if (session.status === 'IN_PROGRESS') {
       // Slot reservation: Start a 60-second in-memory timer
       const timeoutKey = `${sessionId}_${userId}`;

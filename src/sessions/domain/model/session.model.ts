@@ -35,6 +35,9 @@ export class Session {
   isFinished(): boolean {
     return this.status === 'FINISHED';
   }
+  isQuizPending(): boolean {
+    return this.status === 'QUIZ_PENDING';
+  }
 
   canStart(): boolean {
     return this.isWaiting(); // Additional checks will be added in BE-1-09
