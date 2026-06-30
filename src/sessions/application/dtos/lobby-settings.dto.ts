@@ -13,7 +13,8 @@ type BoardTheme = 'CLASSIC';
 type AdditionalRule =
   | 'THROW_AGAIN_ON_6'
   | 'THREE_SIXES_LOSE_TURN'
-  | 'PLAGUE_FLY';
+  | 'PLAGUE_FLY'
+  | 'QUIZ_DUEL';
 
 export class LobbySettingsDto {
   constructor(
@@ -57,8 +58,11 @@ export class LobbySettingsDto {
 
   @IsOptional()
   @IsArray()
-  @IsIn(['THROW_AGAIN_ON_6', 'THREE_SIXES_LOSE_TURN', 'PLAGUE_FLY'], {
-    each: true,
-  })
+  @IsIn(
+    ['THROW_AGAIN_ON_6', 'THREE_SIXES_LOSE_TURN', 'PLAGUE_FLY', 'QUIZ_DUELL'],
+    {
+      each: true,
+    },
+  )
   additionalRules: AdditionalRule[];
 }

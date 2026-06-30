@@ -50,8 +50,9 @@ export class MoveFigureUseCase {
     if (!gameState) {
       throw new SessionNotFoundError();
     }
+    const quizDuellActive = gameState.activeRules.includes('QUIZ_DUELL');
 
-    if (gameState.status === 'QUIZ_PENDING') {
+    if (quizDuellActive && gameState.status === 'QUIZ_PENDING') {
       throw new QuizInProgressError();
     }
 
@@ -122,56 +123,61 @@ export class MoveFigureUseCase {
     };
 
     // [Main] Quiz-Flow bei Capture
-    if (result.capturedFigureId !== null) {
-      const question = await this.quizClient.getRandomQuestion();
-      if (!question) {
-        throw new Error('Failed to fetch quiz question');
-      }
-      const defenderFigure = gameState.figures.find(
-        (f) => f.id === result.capturedFigureId,
-      );
-      if (!defenderFigure) {
-        throw new Error('Defender figure not found');
-      }
-      const defenderId = defenderFigure.playerId;
-      await this.sessionRepository.setPendingQuiz(sessionId, {
-        questionId: question.id,
-        attackerId: userId,
-        defenderId,
-        figureId: result.figureId,
-        fromPosition: result.fromPosition,
-        toPosition: result.toPosition,
-        diceValue: gameState.lastDiceValue,
-      });
-      this.submitQuizAnswerUseCase?.startQuizTimer(sessionId);
-      const updatedGameState =
-        await this.sessionRepository.findGameStateById(sessionId);
-      if (!updatedGameState) {
-        throw new SessionNotFoundError();
-      }
-      this.cache.set(sessionId, updatedGameState).catch(() => {});
-      this.sessionEvents?.emit(sessionId, 'quiz_started', {
-        questionId: question.id,
-        question: question.question,
-        answers: question.answerOptions,
-        attackerId: userId,
-        defenderId,
-        figureId: result.figureId,
-        fromPosition: result.fromPosition,
-        toPosition: result.toPosition,
-      });
-      this.sessionEvents?.emit(sessionId, 'game_state', updatedGameState);
-      return {
-        ...result,
-        outcome: 'QUIZ_STARTED',
-        plagueFlyTransferred: false,
-        gameState: updatedGameState,
-        quiz: {
+
+    if (quizDuellActive) {
+      if (result.capturedFigureId !== null) {
+        const question = await this.quizClient.getRandomQuestion();
+        if (!question) {
+          throw new Error('Failed to fetch quiz question');
+        }
+        const defenderFigure = gameState.figures.find(
+          (f) => f.id === result.capturedFigureId,
+        );
+        if (!defenderFigure) {
+          throw new Error('Defender figure not found');
+        }
+        const defenderId = defenderFigure.playerId;
+        await this.sessionRepository.setPendingQuiz(sessionId, {
+          questionId: question.id,
+          attackerId: userId,
+          defenderId,
+          figureId: result.figureId,
+          fromPosition: result.fromPosition,
+          toPosition: result.toPosition,
+          diceValue: gameState.lastDiceValue,
+        });
+        this.submitQuizAnswerUseCase?.startQuizTimer(sessionId);
+        const updatedGameState =
+          await this.sessionRepository.findGameStateById(sessionId);
+        if (!updatedGameState) {
+          throw new SessionNotFoundError();
+        }
+        this.cache.set(sessionId, updatedGameState).catch(() => {});
+        this.sessionEvents?.emit(sessionId, 'quiz_started', {
           questionId: question.id,
           question: question.question,
           answers: question.answerOptions,
-        },
-      };
+          attackerId: userId,
+          defenderId,
+          figureId: result.figureId,
+          fromPosition: result.fromPosition,
+          toPosition: result.toPosition,
+          category: question.category,
+          timeLimitSeconds: question.timeLimitSeconds,
+        });
+        this.sessionEvents?.emit(sessionId, 'game_state', updatedGameState);
+        return {
+          ...result,
+          outcome: 'QUIZ_STARTED',
+          plagueFlyTransferred: false,
+          gameState: updatedGameState,
+          quiz: {
+            questionId: question.id,
+            question: question.question,
+            answers: question.answerOptions,
+          },
+        };
+      }
     }
 
     await this.sessionRepository.applyMove({

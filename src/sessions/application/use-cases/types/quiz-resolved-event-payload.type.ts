@@ -1,3 +1,5 @@
+import { GameStateType } from './game-state.type';
+
 export type QuizResolvedPayload = {
   winnerId: string;
   loserId: string;
@@ -9,4 +11,5 @@ export type QuizResolvedPayload = {
   captureExecuted: boolean;
   figureId: number;
   toPosition: number;
+  gameState: GameStateType;
 };

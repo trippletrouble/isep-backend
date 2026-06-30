@@ -3,11 +3,13 @@ type BoardTheme = 'CLASSIC';
 type AdditionalRule =
   | 'THROW_AGAIN_ON_6'
   | 'THREE_SIXES_LOSE_TURN'
-  | 'PLAGUE_FLY';
+  | 'PLAGUE_FLY'
+  | 'QUIZ_DUELL';
 const VALID_ADDITIONAL_RULES: AdditionalRule[] = [
   'THROW_AGAIN_ON_6',
   'THREE_SIXES_LOSE_TURN',
   'PLAGUE_FLY',
+  'QUIZ_DUELL',
 ];
 export class LobbySettings {
   public readonly numberOfPlayers: number;
@@ -67,6 +69,10 @@ export class LobbySettings {
 
   isPlagueFlyEnabled(): boolean {
     return this.additionalRules.includes('PLAGUE_FLY');
+  }
+
+  isQuizDuellEnabled(): boolean {
+    return this.additionalRules.includes('QUIZ_DUELL');
   }
 
   toPlainObject(): Record<string, any> {
