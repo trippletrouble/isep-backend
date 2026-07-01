@@ -79,6 +79,7 @@ export class RollDiceUseCase {
             figure.id,
             false,
           );
+          flyDebuffMap.delete(figure.id);
           continue;
         }
         flyDebuffMap.set(figure.id, effectiveDice);
