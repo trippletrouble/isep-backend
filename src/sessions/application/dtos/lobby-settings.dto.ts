@@ -14,7 +14,7 @@ type AdditionalRule =
   | 'THROW_AGAIN_ON_6'
   | 'THREE_SIXES_LOSE_TURN'
   | 'PLAGUE_FLY'
-  | 'QUIZ_DUEL';
+  | 'QUIZ_DUELL';
 
 export class LobbySettingsDto {
   constructor(
