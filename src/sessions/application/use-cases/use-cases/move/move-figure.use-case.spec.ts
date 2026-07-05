@@ -49,7 +49,7 @@ describe('MoveFigureUseCase', () => {
     lastDiceValue: 3,
     diceRolledThisTurn: true,
     consecutiveSixes: 0,
-    activeRules: [],
+    activeRules: ['QUIZ_DUELL'],
     activeFlyCount: 0,
     winnerId: null,
     createdAt: '2026-06-15T12:00:00.000Z',
@@ -118,12 +118,25 @@ describe('MoveFigureUseCase', () => {
     } as unknown as jest.Mocked<LudoEngine>;
 
     mockFlyDomainService = {
-      resolveKick: jest.fn(),
+      resolveKick: jest.fn().mockResolvedValue({
+        bothFliesRemoved: false,
+        flyTransferred: false,
+        attackerFlyRemoved: false,
+      }),
+      handleReachGoal: jest.fn().mockResolvedValue({
+        flyRemoved: false,
+      }),
     } as unknown as jest.Mocked<FlyDomainService>;
 
     mockSessionEvents = {
       emit: jest.fn(),
     } as unknown as jest.Mocked<SessionEventsService>;
+
+    const mockFlyDebuffCache = {
+      set: jest.fn().mockResolvedValue(undefined),
+      get: jest.fn().mockResolvedValue(new Map()),
+      invalidate: jest.fn(),
+    } as any;
 
     useCase = new MoveFigureUseCase(
       mockSessionRepo,
@@ -132,6 +145,7 @@ describe('MoveFigureUseCase', () => {
       mockLudoEngine,
       mockMoveCalculator,
       mockFlyDomainService,
+      mockFlyDebuffCache,
       mockSessionEvents,
     );
   });

@@ -87,17 +87,28 @@ describe('RollDiceUseCase', () => {
     } as unknown as jest.Mocked<LudoEngine>;
 
     mockFlyDomainService = {
-      rollDebuff: jest.fn(),
-      applyDebuff: jest.fn(),
-      shouldRemoveFlyAfterDebuff: jest.fn(),
+      tryAssignFly: jest.fn().mockResolvedValue(true),
+      applyRoll: jest.fn().mockResolvedValue({
+        originalValue: 1,
+        modifiedValue: 1,
+        debuffApplied: false,
+        flyRemoved: false,
+      }),
       canAssignFly: jest.fn(),
     } as unknown as jest.Mocked<FlyDomainService>;
+
+    const mockFlyDebuffCache = {
+      set: jest.fn().mockResolvedValue(undefined),
+      get: jest.fn(),
+      invalidate: jest.fn(),
+    } as any;
 
     useCase = new RollDiceUseCase(
       mockSessionRepo,
       mockDiceClient,
       mockMoveCalculator,
       mockCache,
+      mockFlyDebuffCache,
       mockLudoEngine,
       mockFlyDomainService,
     );

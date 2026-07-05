@@ -63,26 +63,28 @@ export class RollDiceUseCase {
       for (const figure of playerFigures) {
         if (!figure.hasPlagueFly) continue;
 
-        const debuff = this.flyDomainService.rollDebuff();
-        const effectiveDice = this.flyDomainService.applyDebuff(value, debuff);
-        flyDebuffMap.set(figure.id, effectiveDice);
-
-        const newDebuffCount = figure.flyDebuffCount + 1;
-        await this.sessionRepository.incrementFlyDebuffCount(
+        const result = await this.flyDomainService.applyRoll(
           sessionId,
-          figure.id,
+          String(figure.id),
+          value,
         );
 
-        if (this.flyDomainService.shouldRemoveFlyAfterDebuff(newDebuffCount)) {
+        const effectiveDice = result.modifiedValue;
+        flyDebuffMap.set(figure.id, effectiveDice);
+
+        if (result.flyRemoved) {
           await this.sessionRepository.setFigureHasPlagueFly(
             sessionId,
             figure.id,
             false,
           );
           flyDebuffMap.delete(figure.id);
-          continue;
+        } else {
+          await this.sessionRepository.incrementFlyDebuffCount(
+            sessionId,
+            figure.id,
+          );
         }
-        flyDebuffMap.set(figure.id, effectiveDice);
       }
 
       if (value === 1) {
@@ -94,13 +96,20 @@ export class RollDiceUseCase {
         );
 
         if (eligible) {
-          await this.sessionRepository.setFigureHasPlagueFly(
+          const assigned = await this.flyDomainService.tryAssignFly(
             sessionId,
-            eligible.id,
-            true,
+            playerId,
+            String(eligible.id),
           );
-          plagueFlyAcquired = true;
-          acquiredFigureId = eligible.id;
+          if (assigned) {
+            await this.sessionRepository.setFigureHasPlagueFly(
+              sessionId,
+              eligible.id,
+              true,
+            );
+            plagueFlyAcquired = true;
+            acquiredFigureId = eligible.id;
+          }
         }
       }
     }

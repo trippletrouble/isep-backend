@@ -26,6 +26,8 @@ export const appConfig = {
 
   quiz_service_url: validateEnv('QUIZ_SERVICE_URL'),
 
+  fly_service_url: validateEnv('FLY_SERVICE_URL'),
+
   node_env: validateEnv('NODE_ENV'),
 };
 
