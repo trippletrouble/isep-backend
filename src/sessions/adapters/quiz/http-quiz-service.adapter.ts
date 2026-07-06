@@ -47,13 +47,17 @@ export class HttpQuizServiceAdapter extends QuizServicePort {
       typeof obj.category !== 'string' ||
       typeof obj.question !== 'string' ||
       !Array.isArray(obj.answerOptions) ||
-      typeof obj.correctAnswerId !== 'string' ||
-      typeof obj.timeLimitSeconds !== 'number' ||
-      !Number.isFinite(obj.timeLimitSeconds) ||
-      obj.timeLimitSeconds <= 0
+      typeof obj.correctAnswerId !== 'string'
     ) {
       return null;
     }
+
+    const timeLimitSeconds =
+      typeof obj.timeLimitSeconds === 'number' &&
+      Number.isFinite(obj.timeLimitSeconds) &&
+      obj.timeLimitSeconds > 0
+        ? obj.timeLimitSeconds
+        : 15;
 
     const mappedOptions: QuizQuestion['answerOptions'] = [];
 
@@ -87,7 +91,7 @@ export class HttpQuizServiceAdapter extends QuizServicePort {
       question: obj.question,
       answerOptions: mappedOptions,
       correctAnswerId: obj.correctAnswerId,
-      timeLimitSeconds: obj.timeLimitSeconds,
+      timeLimitSeconds,
     };
   }
 

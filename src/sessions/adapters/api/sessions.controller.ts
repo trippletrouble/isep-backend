@@ -408,6 +408,22 @@ export class SessionsController {
     }
   }
 
+  @Post(':id/cheat-roll')
+  @HttpCode(200)
+  async cheatRoll(
+    @Param('id') sessionId: string,
+    @Body() body: { values: number[] },
+  ) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new ForbiddenException();
+    }
+    if (!(global as any).cheatRolls) {
+      (global as any).cheatRolls = {};
+    }
+    (global as any).cheatRolls[sessionId] = body.values;
+    return { success: true, queued: body.values };
+  }
+
   @Post()
   @UseGuards(SessionGuard)
   async createSession(

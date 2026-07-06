@@ -47,7 +47,13 @@ export class RollDiceUseCase {
     if (gameState.currentPlayerId !== playerId) throw new NotYourTurnError();
     if (gameState.diceRolledThisTurn) throw new DiceAlreadyRolledError();
 
-    const value = await this.diceClient.roll();
+    let value: number;
+    const cheatList = (global as any).cheatRolls?.[sessionId];
+    if (process.env.NODE_ENV !== 'production' && Array.isArray(cheatList) && cheatList.length > 0) {
+      value = cheatList.shift();
+    } else {
+      value = await this.diceClient.roll();
+    }
     const flyActive = gameState.activeRules.includes('PLAGUE_FLY');
 
     const flyDebuffMap = new Map<number, number>();
