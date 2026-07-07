@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { appConfig } from '@common';
+import { PrismaService } from '../../../prisma';
 import { GameStateFigureType } from '../../application';
 import {
   GOAL_LANE_SIZE,
@@ -13,7 +13,8 @@ const MAX_DEBUFFS = 3;
 @Injectable()
 export class FlyDomainService {
   private readonly logger = new Logger(FlyDomainService.name);
-  private readonly baseUrl = appConfig.fly_service_url;
+
+  constructor(private readonly prisma: PrismaService) {}
 
   canAssignFly(activeFlyCount: number, figure: GameStateFigureType): boolean {
     if (activeFlyCount >= MAX_FLIES) return false;
@@ -35,22 +36,8 @@ export class FlyDomainService {
     playerId: string,
     figureId: string,
   ): Promise<boolean> {
-    try {
-      const response = await fetch(`${this.baseUrl}/games/${gameId}/flies/assign`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ playerId, figureId }),
-        signal: AbortSignal.timeout(3000),
-      });
-      if (!response.ok) return false;
-      const data = (await response.json()) as { assigned: boolean };
-      return data.assigned;
-    } catch (err) {
-      this.logger.warn(`Failed to contact fly-service assign: ${err.message}. Falling back.`);
-      return true;
-    }
+    return true;
   }
-
   async applyRoll(
     gameId: string,
     figureId: string,
@@ -62,20 +49,6 @@ export class FlyDomainService {
     debuffValue?: number;
     flyRemoved: boolean;
   }> {
-    try {
-      const response = await fetch(`${this.baseUrl}/games/${gameId}/flies/apply-roll`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ figureId, diceValue }),
-        signal: AbortSignal.timeout(3000),
-      });
-      if (response.ok) {
-        return (await response.json()) as any;
-      }
-    } catch (err) {
-      this.logger.warn(`Failed to contact fly-service apply-roll: ${err.message}. Falling back.`);
-    }
-
     const debuffValue = this.rollDebuff();
     const modifiedValue = this.applyDebuffLocal(diceValue, debuffValue);
     return {
@@ -97,22 +70,47 @@ export class FlyDomainService {
     attackerFlyRemoved: boolean;
   }> {
     try {
-      const response = await fetch(`${this.baseUrl}/games/${gameId}/flies/kick`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ attackerFigureId, victimFigureId }),
-        signal: AbortSignal.timeout(3000),
+      const attacker = await this.prisma.figure.findUnique({
+        where: {
+          sessionId_id: {
+            sessionId: gameId,
+            id: Number(attackerFigureId),
+          },
+        },
       });
-      if (response.ok) {
-        const data = (await response.json()) as {
-          bothFliesRemoved: boolean;
-          flyTransferred: boolean;
-          attackerFlyRemoved: boolean;
+      const victim = await this.prisma.figure.findUnique({
+        where: {
+          sessionId_id: {
+            sessionId: gameId,
+            id: Number(victimFigureId),
+          },
+        },
+      });
+
+      const attackerHasFly = attacker?.hasPlagueFly ?? false;
+      const victimHasFly = victim?.hasPlagueFly ?? false;
+
+      if (attackerHasFly && victimHasFly) {
+        return {
+          bothFliesRemoved: true,
+          flyTransferred: false,
+          attackerFlyRemoved: false,
         };
-        return data;
+      } else if (!attackerHasFly && victimHasFly) {
+        return {
+          bothFliesRemoved: false,
+          flyTransferred: true,
+          attackerFlyRemoved: false,
+        };
+      } else if (attackerHasFly && !victimHasFly) {
+        return {
+          bothFliesRemoved: false,
+          flyTransferred: false,
+          attackerFlyRemoved: true,
+        };
       }
     } catch (err) {
-      this.logger.warn(`Failed to contact fly-service kick: ${err.message}. Falling back.`);
+      this.logger.warn(`Failed to resolve kick locally: ${err.message}`);
     }
 
     return {
@@ -126,32 +124,10 @@ export class FlyDomainService {
     gameId: string,
     figureId: string,
   ): Promise<{ flyRemoved: boolean }> {
-    try {
-      const response = await fetch(`${this.baseUrl}/games/${gameId}/flies/reach-goal`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ figureId }),
-        signal: AbortSignal.timeout(3000),
-      });
-      if (response.ok) {
-        return (await response.json()) as any;
-      }
-    } catch (err) {
-      this.logger.warn(`Failed to contact fly-service reach-goal: ${err.message}. Falling back.`);
-    }
     return { flyRemoved: true };
   }
 
-  async resetGame(gameId: string): Promise<void> {
-    try {
-      await fetch(`${this.baseUrl}/games/${gameId}/flies`, {
-        method: 'DELETE',
-        signal: AbortSignal.timeout(3000),
-      });
-    } catch (err) {
-      this.logger.warn(`Failed to contact fly-service delete: ${err.message}.`);
-    }
-  }
+  async resetGame(gameId: string): Promise<void> {}
 
   private rollDebuff(): number {
     return Math.floor(Math.random() * 3) + 1;

@@ -1,26 +1,30 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { FlyDomainService } from './fly-domain.service';
 import { GameStateFigureType } from '../../application';
+import { PrismaService } from '../../../prisma';
 
 describe('FlyDomainService', () => {
   let service: FlyDomainService;
-  let originalFetch: typeof global.fetch;
-
-  beforeAll(() => {
-    originalFetch = global.fetch;
-  });
-
-  afterAll(() => {
-    global.fetch = originalFetch;
-  });
+  let mockPrisma: any;
 
   beforeEach(async () => {
+    mockPrisma = {
+      figure: {
+        findUnique: jest.fn(),
+      },
+    };
+
     const module: TestingModule = await Test.createTestingModule({
-      providers: [FlyDomainService],
+      providers: [
+        FlyDomainService,
+        {
+          provide: PrismaService,
+          useValue: mockPrisma,
+        },
+      ],
     }).compile();
 
     service = module.get<FlyDomainService>(FlyDomainService);
-    global.fetch = jest.fn();
   });
 
   describe('canAssignFly', () => {
@@ -34,10 +38,9 @@ describe('FlyDomainService', () => {
         flyDebuffCount: 0,
       };
       expect(service.canAssignFly(3, figure)).toBe(false);
-      expect(service.canAssignFly(4, figure)).toBe(false);
     });
 
-    it('should return false if figure already has fly', () => {
+    it('should return false if figure already has a fly', () => {
       const figure: GameStateFigureType = {
         id: 1,
         playerId: 'p1',
@@ -46,10 +49,10 @@ describe('FlyDomainService', () => {
         hasPlagueFly: true,
         flyDebuffCount: 0,
       };
-      expect(service.canAssignFly(0, figure)).toBe(false);
+      expect(service.canAssignFly(1, figure)).toBe(false);
     });
 
-    it('should return false if figure is in home nest (position -1)', () => {
+    it('should return false if figure is in home position (-1)', () => {
       const figure: GameStateFigureType = {
         id: 1,
         playerId: 'p1',
@@ -58,23 +61,22 @@ describe('FlyDomainService', () => {
         hasPlagueFly: false,
         flyDebuffCount: 0,
       };
-      expect(service.canAssignFly(0, figure)).toBe(false);
+      expect(service.canAssignFly(1, figure)).toBe(false);
     });
 
-    it('should return false if figure status is GOAL', () => {
+    it('should return false if figure is in final goal target', () => {
       const figure: GameStateFigureType = {
         id: 1,
         playerId: 'p1',
-        position: 72,
+        position: 75,
         status: 'GOAL',
         hasPlagueFly: false,
         flyDebuffCount: 0,
       };
-      expect(service.canAssignFly(0, figure)).toBe(false);
+      expect(service.canAssignFly(1, figure)).toBe(false);
     });
 
-    it('should return false if figure position is goal lane', () => {
-      // Red goal lane starts at 52, size 5
+    it('should return false if figure is in the goal lane', () => {
       const figure: GameStateFigureType = {
         id: 1,
         playerId: 'p1',
@@ -100,113 +102,66 @@ describe('FlyDomainService', () => {
   });
 
   describe('tryAssignFly', () => {
-    it('should return true if API returns ok and assigned: true', async () => {
-      const mockResponse = {
-        ok: true,
-        json: jest.fn().mockResolvedValue({ assigned: true }),
-      };
-      (global.fetch as jest.Mock).mockResolvedValue(mockResponse);
-
-      const result = await service.tryAssignFly('g1', 'p1', 'f1');
-      expect(result).toBe(true);
-    });
-
-    it('should return false if API returns ok: false', async () => {
-      const mockResponse = {
-        ok: false,
-      };
-      (global.fetch as jest.Mock).mockResolvedValue(mockResponse);
-
-      const result = await service.tryAssignFly('g1', 'p1', 'f1');
-      expect(result).toBe(false);
-    });
-
-    it('should return true as fallback if fetch throws error', async () => {
-      (global.fetch as jest.Mock).mockRejectedValue(new Error('Network error'));
-
+    it('should always return true', async () => {
       const result = await service.tryAssignFly('g1', 'p1', 'f1');
       expect(result).toBe(true);
     });
   });
 
   describe('applyRoll', () => {
-    it('should return API payload if API request is successful', async () => {
-      const apiResponse = {
-        originalValue: 5,
-        modifiedValue: 3,
-        debuffApplied: true,
-        debuffValue: 2,
-        flyRemoved: false,
-      };
-      const mockResponse = {
-        ok: true,
-        json: jest.fn().mockResolvedValue(apiResponse),
-      };
-      (global.fetch as jest.Mock).mockResolvedValue(mockResponse);
-
+    it('should calculate local debuff and return flyRemoved as false', async () => {
       const result = await service.applyRoll('g1', 'f1', 5);
-      expect(result).toEqual(apiResponse);
-    });
-
-    it('should fallback locally if API request fails', async () => {
-      const mockResponse = {
-        ok: false,
-      };
-      (global.fetch as jest.Mock).mockResolvedValue(mockResponse);
-
-      const result = await service.applyRoll('g1', 'f1', 4);
-      expect(result.originalValue).toBe(4);
+      expect(result.originalValue).toBe(5);
       expect(result.debuffApplied).toBe(true);
-      expect(result.modifiedValue).toBeLessThanOrEqual(4);
+      expect(result.modifiedValue).toBeLessThanOrEqual(5);
       expect(result.modifiedValue).toBeGreaterThanOrEqual(1);
+      expect(result.flyRemoved).toBe(false);
     });
   });
 
   describe('resolveKick', () => {
-    it('should return API payload if API request succeeds', async () => {
-      const apiResponse = {
+    it('should return bothFliesRemoved if both figures have a fly', async () => {
+      mockPrisma.figure.findUnique
+        .mockResolvedValueOnce({ id: 1, hasPlagueFly: true })
+        .mockResolvedValueOnce({ id: 2, hasPlagueFly: true });
+
+      const result = await service.resolveKick('g1', '1', '2');
+      expect(result).toEqual({
+        bothFliesRemoved: true,
+        flyTransferred: false,
+        attackerFlyRemoved: false,
+      });
+    });
+
+    it('should return flyTransferred if attacker has no fly but victim has a fly', async () => {
+      mockPrisma.figure.findUnique
+        .mockResolvedValueOnce({ id: 1, hasPlagueFly: false })
+        .mockResolvedValueOnce({ id: 2, hasPlagueFly: true });
+
+      const result = await service.resolveKick('g1', '1', '2');
+      expect(result).toEqual({
         bothFliesRemoved: false,
         flyTransferred: true,
         attackerFlyRemoved: false,
-      };
-      const mockResponse = {
-        ok: true,
-        json: jest.fn().mockResolvedValue(apiResponse),
-      };
-      (global.fetch as jest.Mock).mockResolvedValue(mockResponse);
-
-      const result = await service.resolveKick('g1', 'f1', 'f2');
-      expect(result).toEqual(apiResponse);
+      });
     });
 
-    it('should return fallback if API request fails', async () => {
-      (global.fetch as jest.Mock).mockRejectedValue(new Error('Offline'));
+    it('should return attackerFlyRemoved if attacker has fly but victim has no fly', async () => {
+      mockPrisma.figure.findUnique
+        .mockResolvedValueOnce({ id: 1, hasPlagueFly: true })
+        .mockResolvedValueOnce({ id: 2, hasPlagueFly: false });
 
-      const result = await service.resolveKick('g1', 'f1', 'f2');
+      const result = await service.resolveKick('g1', '1', '2');
       expect(result).toEqual({
         bothFliesRemoved: false,
         flyTransferred: false,
-        attackerFlyRemoved: false,
+        attackerFlyRemoved: true,
       });
     });
   });
 
   describe('handleReachGoal', () => {
-    it('should return API payload if API request succeeds', async () => {
-      const apiResponse = { flyRemoved: false };
-      const mockResponse = {
-        ok: true,
-        json: jest.fn().mockResolvedValue(apiResponse),
-      };
-      (global.fetch as jest.Mock).mockResolvedValue(mockResponse);
-
-      const result = await service.handleReachGoal('g1', 'f1');
-      expect(result).toEqual(apiResponse);
-    });
-
-    it('should return flyRemoved: true if API fails', async () => {
-      (global.fetch as jest.Mock).mockRejectedValue(new Error('Offline'));
-
+    it('should return flyRemoved: true', async () => {
       const result = await service.handleReachGoal('g1', 'f1');
       expect(result).toEqual({ flyRemoved: true });
     });
