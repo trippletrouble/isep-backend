@@ -69,11 +69,11 @@ describe('LudoEngine', () => {
         expect(getTargetPosition(-1, 5, PlayerColor.RED)).toBeNull();
       });
 
-      it('should yield position 0 for all player colors on a 6', () => {
+      it('should yield correct start position for all player colors on a 6', () => {
         expect(getTargetPosition(-1, 6, PlayerColor.RED)).toBe(0);
-        expect(getTargetPosition(-1, 6, PlayerColor.BLUE)).toBe(0);
-        expect(getTargetPosition(-1, 6, PlayerColor.YELLOW)).toBe(0);
-        expect(getTargetPosition(-1, 6, PlayerColor.GREEN)).toBe(0);
+        expect(getTargetPosition(-1, 6, PlayerColor.BLUE)).toBe(13);
+        expect(getTargetPosition(-1, 6, PlayerColor.YELLOW)).toBe(26);
+        expect(getTargetPosition(-1, 6, PlayerColor.GREEN)).toBe(39);
       });
     });
 
@@ -87,39 +87,41 @@ describe('LudoEngine', () => {
 
     describe('C) EINTRITT IN HOME RUN', () => {
       it('should enter home run lane', () => {
-        expect(getTargetPosition(50, 1, PlayerColor.RED)).toBe(51);
-        expect(getTargetPosition(49, 3, PlayerColor.RED)).toBe(52);
-        expect(getTargetPosition(50, 5, PlayerColor.RED)).toBe(55);
+        expect(getTargetPosition(50, 1, PlayerColor.RED)).toBe(52);
+        expect(getTargetPosition(49, 3, PlayerColor.RED)).toBe(53);
+        expect(getTargetPosition(50, 5, PlayerColor.RED)).toBe(56);
       });
     });
 
     describe('D) MOVEMENT IN HOME RUN', () => {
       it('should move forward inside home run lane', () => {
-        expect(getTargetPosition(51, 2, PlayerColor.RED)).toBe(53);
+        expect(getTargetPosition(51, 2, PlayerColor.RED)).toBe(54);
         expect(getTargetPosition(55, 1, PlayerColor.RED)).toBe(56);
       });
     });
 
     describe('E) GOAL (exact throw)', () => {
-      it('should land on 56 only with an exact throw', () => {
+      it('should land on 72 only with an exact throw', () => {
         // Position 54
         expect(getTargetPosition(54, 2, PlayerColor.RED)).toBe(56);
-        expect(getTargetPosition(54, 3, PlayerColor.RED)).toBeNull();
+        expect(getTargetPosition(54, 3, PlayerColor.RED)).toBe(72);
+        expect(getTargetPosition(54, 4, PlayerColor.RED)).toBeNull();
 
         // Position 55
         expect(getTargetPosition(55, 1, PlayerColor.RED)).toBe(56);
-        expect(getTargetPosition(55, 2, PlayerColor.RED)).toBeNull();
+        expect(getTargetPosition(55, 2, PlayerColor.RED)).toBe(72);
+        expect(getTargetPosition(55, 3, PlayerColor.RED)).toBeNull();
 
         // Position 50
-        expect(getTargetPosition(50, 6, PlayerColor.RED)).toBe(56);
+        expect(getTargetPosition(50, 6, PlayerColor.RED)).toBe(72);
         expect(getTargetPosition(50, 7, PlayerColor.RED)).toBeNull();
       });
     });
 
     describe('F) EDGE CASES', () => {
       it('should return null if already in goal', () => {
-        expect(getTargetPosition(56, 1, PlayerColor.RED)).toBeNull();
-        expect(getTargetPosition(56, 6, PlayerColor.RED)).toBeNull();
+        expect(getTargetPosition(72, 1, PlayerColor.RED)).toBeNull();
+        expect(getTargetPosition(72, 6, PlayerColor.RED)).toBeNull();
       });
 
       it('should handle base cases', () => {
@@ -194,7 +196,7 @@ describe('LudoEngine', () => {
         // If Red is at relative position 10 and moves 3 steps, Red's relative position becomes 13,
         // and Red's absolute position becomes (0 + 13) % 52 = 13.
         // This is a match!
-        const fOpp = createTestFigure(2, 0, PieceStatus.ACTIVE, 'blue-id');
+        const fOpp = createTestFigure(2, 13, PieceStatus.ACTIVE, 'blue-id');
         
         const session = createTestSession([pRed, pBlue], [fOwn, fOpp]);
 
@@ -225,7 +227,7 @@ describe('LudoEngine', () => {
         const f = createTestFigure(1, 53, PieceStatus.ACTIVE, 'red-id');
         const session = createTestSession([pRed], [f]);
 
-        const moves = engine.getPossibleMoves(session, 'red-id', 4);
+        const moves = engine.getPossibleMoves(session, 'red-id', 5);
         expect(moves).toHaveLength(0);
       });
 
@@ -263,7 +265,7 @@ describe('LudoEngine', () => {
         // If Blue is at relative position 39, their absolute position is (13 + 39) % 52 = 0.
         // Red's start position absolute offset is 0.
         // So Blue is sitting on Red's starting space!
-        const fOpp = createTestFigure(2, 39, PieceStatus.ACTIVE, 'blue-id');
+        const fOpp = createTestFigure(2, 0, PieceStatus.ACTIVE, 'blue-id');
         
         const session = createTestSession([pRed, pBlue], [fOwn, fOpp]);
 
@@ -541,7 +543,7 @@ describe('LudoEngine', () => {
         const pRed = createTestParticipant('red-id', PlayerColor.RED);
         const pBlue = createTestParticipant('blue-id', PlayerColor.BLUE);
         const fOwn = createTestFigure(1, 10, PieceStatus.ACTIVE, 'red-id');
-        const fOpp = createTestFigure(2, 0, PieceStatus.ACTIVE, 'blue-id'); // Absolute position 13
+        const fOpp = createTestFigure(2, 13, PieceStatus.ACTIVE, 'blue-id'); // Absolute position 13
         const session = createTestSession([pRed, pBlue], [fOwn, fOpp], { currentPlayerId: 'red-id' });
 
         const result = engine.applyMove(session, 1, 3);
@@ -562,12 +564,12 @@ describe('LudoEngine', () => {
         const pRed = createTestParticipant('red-id', PlayerColor.RED);
         const pBlue = createTestParticipant('blue-id', PlayerColor.BLUE);
         const fOwn = createTestFigure(1, 50, PieceStatus.ACTIVE, 'red-id');
-        const fOpp = createTestFigure(2, 52, PieceStatus.ACTIVE, 'blue-id'); // Different home run lane
+        const fOpp = createTestFigure(2, 53, PieceStatus.ACTIVE, 'blue-id'); // Different home run lane
         const session = createTestSession([pRed, pBlue], [fOwn, fOpp], { currentPlayerId: 'red-id' });
 
         const result = engine.applyMove(session, 1, 2);
         expect(result.outcome).toBe('MOVED');
-        expect(result.toPosition).toBe(52);
+        expect(result.toPosition).toBe(53);
         expect(result.capturedFigureId).toBeNull();
         expect(result.rollAgain).toBe(false);
       });
@@ -580,22 +582,22 @@ describe('LudoEngine', () => {
         const f2 = createTestFigure(2, -1, PieceStatus.HOME, 'red-id');
         const session = createTestSession([pRed], [f1, f2], { currentPlayerId: 'red-id' });
 
-        const result = engine.applyMove(session, 1, 1);
+        const result = engine.applyMove(session, 1, 2);
         expect(result.outcome).toBe('GOAL');
-        expect(result.toPosition).toBe(56);
+        expect(result.toPosition).toBe(72);
       });
     });
 
     describe('F) GAME WON', () => {
       it('should win game when the fourth figure reaches goal', () => {
         const pRed = createTestParticipant('red-id', PlayerColor.RED);
-        const f1 = createTestFigure(1, 56, PieceStatus.GOAL, 'red-id');
-        const f2 = createTestFigure(2, 56, PieceStatus.GOAL, 'red-id');
-        const f3 = createTestFigure(3, 56, PieceStatus.GOAL, 'red-id');
+        const f1 = createTestFigure(1, 72, PieceStatus.GOAL, 'red-id');
+        const f2 = createTestFigure(2, 72, PieceStatus.GOAL, 'red-id');
+        const f3 = createTestFigure(3, 72, PieceStatus.GOAL, 'red-id');
         const f4 = createTestFigure(4, 55, PieceStatus.ACTIVE, 'red-id');
         const session = createTestSession([pRed], [f1, f2, f3, f4], { currentPlayerId: 'red-id' });
 
-        const result = engine.applyMove(session, 4, 1);
+        const result = engine.applyMove(session, 4, 2);
         expect(result.outcome).toBe('GAME_WON');
         expect(result.rollAgain).toBe(false); // No extra turn when winning
       });
@@ -631,7 +633,7 @@ describe('LudoEngine', () => {
         const pRed = createTestParticipant('red-id', PlayerColor.RED);
         const pBlue = createTestParticipant('blue-id', PlayerColor.BLUE);
         const fOwn = createTestFigure(1, -1, PieceStatus.HOME, 'red-id');
-        const fOpp = createTestFigure(2, 39, PieceStatus.ACTIVE, 'blue-id'); // Absolute offset 0 (Blue starts at 13, 13+39=52 -> 0)
+        const fOpp = createTestFigure(2, 0, PieceStatus.ACTIVE, 'blue-id'); // Absolute position 0
         const session = createTestSession([pRed, pBlue], [fOwn, fOpp], { currentPlayerId: 'red-id' });
 
         const result = engine.applyMove(session, 1, 6);
@@ -720,7 +722,7 @@ describe('LudoEngine', () => {
         // If Red is at relative position 20 and moves 3, Red's relative position becomes 23,
         // and Red's absolute position becomes (0 + 23) % 52 = 23.
         // This is a match!
-        const fBlue = createTestFigure(2, 10, PieceStatus.ACTIVE, 'blue-id');
+        const fBlue = createTestFigure(2, 23, PieceStatus.ACTIVE, 'blue-id');
         
         const session = createTestSession([pRed, pBlue], [fRed, fBlue], {
           currentPlayerId: 'red-id',

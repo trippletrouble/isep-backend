@@ -198,4 +198,95 @@ describe('RollDiceUseCase', () => {
       DiceAlreadyRolledError,
     );
   });
+
+  describe('Plague Fly integration', () => {
+    it('should assign a plague fly to an eligible figure when rolling a 1 and PLAGUE_FLY is active', async () => {
+      const stateWithFlyActive: GameStateType = {
+        ...mockGameState,
+        activeRules: ['PLAGUE_FLY'],
+        figures: [
+          { id: 1, playerId, position: 10, status: 'ACTIVE', hasPlagueFly: false, flyDebuffCount: 0 },
+        ] as any,
+      };
+
+      mockSessionRepo.findGameStateById
+        .mockResolvedValueOnce(stateWithFlyActive)
+        .mockResolvedValueOnce(stateWithFlyActive)
+        .mockResolvedValueOnce(updatedGameState);
+
+      mockDiceClient.roll.mockResolvedValueOnce(1);
+      mockFlyDomainService.canAssignFly.mockReturnValueOnce(true);
+      mockFlyDomainService.tryAssignFly.mockResolvedValueOnce(true);
+      mockSessionRepo.setFigureHasPlagueFly = jest.fn().mockResolvedValue(undefined);
+
+      await useCase.execute(sessionId, playerId);
+
+      expect(mockFlyDomainService.canAssignFly).toHaveBeenCalled();
+      expect(mockFlyDomainService.tryAssignFly).toHaveBeenCalledWith(sessionId, playerId, '1');
+      expect(mockSessionRepo.setFigureHasPlagueFly).toHaveBeenCalledWith(sessionId, 1, true);
+    });
+
+    it('should apply debuff to the rolled value if the figure has a plague fly', async () => {
+      const stateWithFigureAffected: GameStateType = {
+        ...mockGameState,
+        activeRules: ['PLAGUE_FLY'],
+        figures: [
+          { id: 1, playerId, position: 10, status: 'ACTIVE', hasPlagueFly: true, flyDebuffCount: 0 },
+        ] as any,
+      };
+
+      mockSessionRepo.findGameStateById
+        .mockResolvedValueOnce(stateWithFigureAffected)
+        .mockResolvedValueOnce(stateWithFigureAffected)
+        .mockResolvedValueOnce(updatedGameState);
+
+      mockDiceClient.roll.mockResolvedValueOnce(5);
+      mockFlyDomainService.applyRoll.mockResolvedValueOnce({
+        originalValue: 5,
+        modifiedValue: 3,
+        debuffApplied: true,
+        flyRemoved: false,
+      });
+      mockSessionRepo.incrementFlyDebuffCount = jest.fn().mockResolvedValue(undefined);
+
+      await useCase.execute(sessionId, playerId);
+
+      expect(mockFlyDomainService.applyRoll).toHaveBeenCalledWith(sessionId, '1', 5);
+      expect(mockSessionRepo.updateAfterDiceRoll).toHaveBeenCalledWith(sessionId, {
+        lastDiceValue: 5,
+        diceRolledThisTurn: true,
+        consecutiveSixes: 0,
+      });
+      expect(mockSessionRepo.incrementFlyDebuffCount).toHaveBeenCalledWith(sessionId, 1);
+    });
+
+    it('should remove plague fly from the figure if flyRemoved is true', async () => {
+      const stateWithFigureAffected: GameStateType = {
+        ...mockGameState,
+        activeRules: ['PLAGUE_FLY'],
+        figures: [
+          { id: 1, playerId, position: 10, status: 'ACTIVE', hasPlagueFly: true, flyDebuffCount: 2 },
+        ] as any,
+      };
+
+      mockSessionRepo.findGameStateById
+        .mockResolvedValueOnce(stateWithFigureAffected)
+        .mockResolvedValueOnce(stateWithFigureAffected)
+        .mockResolvedValueOnce(updatedGameState);
+
+      mockDiceClient.roll.mockResolvedValueOnce(5);
+      mockFlyDomainService.applyRoll.mockResolvedValueOnce({
+        originalValue: 5,
+        modifiedValue: 3,
+        debuffApplied: true,
+        flyRemoved: true,
+      });
+      mockSessionRepo.setFigureHasPlagueFly = jest.fn().mockResolvedValue(undefined);
+
+      await useCase.execute(sessionId, playerId);
+
+      expect(mockFlyDomainService.applyRoll).toHaveBeenCalledWith(sessionId, '1', 5);
+      expect(mockSessionRepo.setFigureHasPlagueFly).toHaveBeenCalledWith(sessionId, 1, false);
+    });
+  });
 });
