@@ -1,7 +1,15 @@
-export type GameStatus = 'WAITING' | 'IN_PROGRESS' | 'QUIZ_PENDING' | 'FINISHED';
+export type GameStatus =
+  | 'WAITING'
+  | 'IN_PROGRESS'
+  | 'QUIZ_PENDING'
+  | 'FINISHED';
 export type GameMode = 'CLASSIC';
 export type BoardTheme = 'CLASSIC';
-export type AdditionalRule = 'THROW_AGAIN_ON_6' | 'THREE_SIXES_LOSE_TURN';
+export type AdditionalRule =
+  | 'THROW_AGAIN_ON_6'
+  | 'THREE_SIXES_LOSE_TURN'
+  | 'PLAGUE_FLY'
+  | 'QUIZ_DUELL';
 export class Session {
   constructor(
     public readonly id: string,

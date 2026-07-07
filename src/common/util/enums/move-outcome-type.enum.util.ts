@@ -1,1 +1,1 @@
-export type MoveOutcomeType = 'MOVED' | 'CAPTURED' | 'GOAL' | 'GAME_WON';
+export type MoveOutcomeType = 'MOVED' | 'CAPTURED' | 'GOAL' | 'GAME_WON' | 'QUIZ_STARTED';

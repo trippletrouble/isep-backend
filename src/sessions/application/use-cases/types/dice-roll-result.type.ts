@@ -9,5 +9,6 @@ export type DiceRollResultType = {
   rollAgain: boolean;
   consecutiveSixes: number;
   turnForfeit: boolean;
+  plagueFlyAcquired: boolean;
   gameState: GameStateType;
 };

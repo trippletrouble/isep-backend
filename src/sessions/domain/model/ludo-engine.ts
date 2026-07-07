@@ -127,7 +127,11 @@ export class LudoEngine implements ILudoEngine {
     throw new Error('No active players found to advance turn');
   }
 
-  public handleRoll(session: GameStateType, diceValue: number): DiceRollResult {
+  public handleRoll(
+    session: GameStateType,
+    diceValue: number,
+    flyDebuffMap?: Map<number, number>,
+  ): DiceRollResult {
     const consecutiveSixes = diceValue === 6 ? session.consecutiveSixes + 1 : 0;
 
     const turnForfeit =
@@ -136,7 +140,12 @@ export class LudoEngine implements ILudoEngine {
 
     const possibleMoves = turnForfeit
       ? []
-      : this.getPossibleMoves(session, session.currentPlayerId!, diceValue);
+      : this.getPossibleMoves(
+          session,
+          session.currentPlayerId!,
+          diceValue,
+          flyDebuffMap,
+        );
 
     const hasMoves = possibleMoves.length > 0;
 
@@ -159,6 +168,7 @@ export class LudoEngine implements ILudoEngine {
     session: GameStateType,
     playerId: string,
     diceValue: number,
+    flyDebuffMap?: Map<number, number>,
   ): PossibleMoveType[] {
     const player = session.players.find((p) => p.id === playerId);
     if (!player) {
@@ -169,9 +179,11 @@ export class LudoEngine implements ILudoEngine {
     const moves: PossibleMoveType[] = [];
 
     for (const figure of ownFigures) {
+      const effectiveDice = flyDebuffMap?.get(figure.id) ?? diceValue;
+
       const targetPos = this.calculateTargetPosition(
         figure.position,
-        diceValue,
+        effectiveDice,
         player.color,
       );
       if (targetPos === null) {
@@ -211,6 +223,7 @@ export class LudoEngine implements ILudoEngine {
     session: GameStateType,
     figureId: number,
     diceValue: number,
+    flyDebuffMap?: Map<number, number>,
   ): MoveResult {
     const playerId = session.currentPlayerId;
     if (!playerId) {
@@ -231,7 +244,12 @@ export class LudoEngine implements ILudoEngine {
       );
     }
 
-    const possibleMoves = this.getPossibleMoves(session, playerId, diceValue);
+    const possibleMoves = this.getPossibleMoves(
+      session,
+      playerId,
+      diceValue,
+      flyDebuffMap,
+    );
     const selectedMove = possibleMoves.find((m) => m.figureId === figureId);
     if (!selectedMove) {
       throw new Error('Invalid move');

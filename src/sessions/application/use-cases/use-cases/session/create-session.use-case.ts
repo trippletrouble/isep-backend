@@ -22,7 +22,12 @@ export class CreateSessionUseCase {
       boardTheme?: 'CLASSIC';
       isPrivate?: boolean;
       turnTimeLimitSeconds?: number | null;
-      additionalRules?: ('THROW_AGAIN_ON_6' | 'THREE_SIXES_LOSE_TURN')[];
+      additionalRules?: (
+        | 'THROW_AGAIN_ON_6'
+        | 'THREE_SIXES_LOSE_TURN'
+        | 'PLAGUE_FLY'
+        | 'QUIZ_DUELL'
+      )[];
     },
   ): Promise<Session> {
     const lobbySettings = new LobbySettings(

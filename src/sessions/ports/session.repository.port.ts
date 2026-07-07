@@ -77,5 +77,32 @@ export abstract class SessionRepositoryPort {
     captureProceeds: boolean;
   }): Promise<void>;
 
-  abstract findActiveQuizDuel(sessionId: string): Promise<ActiveQuizType | null>;
+  abstract findActiveQuizDuel(
+    sessionId: string,
+  ): Promise<ActiveQuizType | null>;
+
+  abstract setFigureHasPlagueFly(
+    sessionId: string,
+    figureId: number,
+    value: boolean,
+  ): Promise<void>;
+  abstract incrementFlyDebuffCount(
+    sessionId: string,
+    figureId: number,
+  ): Promise<number>;
+
+  abstract setPendingQuiz(
+    sessionId: string,
+    data: {
+      questionId: string;
+      attackerId: string;
+      defenderId: string;
+      figureId: number;
+      fromPosition: number;
+      toPosition: number;
+      diceValue: number;
+    },
+  ): Promise<void>;
+
+  abstract clearPendingQuiz(sessionId: string): Promise<void>;
 }

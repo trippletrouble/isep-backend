@@ -6,7 +6,7 @@ import {
   InvalidSessionStatusError,
   OnlyHostCanInviteError,
 } from '../../errors';
-import { GameStatus } from '..prisma-clientenums';
+import { GameStatus } from '$gen/prisma-client/enums';
 import { SessionWithParticipants } from '../../types';
 
 const makeSession = (overrides: any = {}): SessionWithParticipants => ({

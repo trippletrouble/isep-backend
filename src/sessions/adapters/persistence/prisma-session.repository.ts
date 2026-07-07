@@ -109,6 +109,8 @@ export class PrismaSessionRepository implements SessionRepositoryPort {
         playerId: figure.participant.userId,
         position: figure.position,
         status: figure.status,
+        hasPlagueFly: figure.hasPlagueFly,
+        flyDebuffCount: figure.flyDebuffCount,
       })),
       currentPlayerId: session.currentPlayerId,
       turnNumber: session.turnNumber,
@@ -116,6 +118,7 @@ export class PrismaSessionRepository implements SessionRepositoryPort {
       diceRolledThisTurn: session.diceRolledThisTurn,
       consecutiveSixes: session.consecutiveSixes,
       activeRules: session.additionalRules,
+      activeFlyCount: session.figures.filter((f) => f.hasPlagueFly).length,
       winnerId: session.winnerId,
       activeQuiz,
       createdAt: session.createdAt.toISOString(),
@@ -725,5 +728,72 @@ export class PrismaSessionRepository implements SessionRepositoryPort {
       diceValue: quizDuel.diceValue,
       createdAt: quizDuel.createdAt.toISOString(),
     };
+  }
+
+  async setFigureHasPlagueFly(
+    sessionId: string,
+    figureId: number,
+    value: boolean,
+  ): Promise<void> {
+    await this.prisma.figure.update({
+      where: { sessionId_id: { sessionId, id: figureId } },
+      data: { hasPlagueFly: value, flyDebuffCount: 0 },
+    });
+  }
+
+  async incrementFlyDebuffCount(
+    sessionId: string,
+    figureId: number,
+  ): Promise<number> {
+    const updated = await this.prisma.figure.update({
+      where: { sessionId_id: { sessionId, id: figureId } },
+      data: { flyDebuffCount: { increment: 1 } },
+    });
+    return updated.flyDebuffCount;
+  }
+
+  async setPendingQuiz(
+    sessionId: string,
+    data: {
+      questionId: string;
+      attackerId: string;
+      defenderId: string;
+      figureId: number;
+      fromPosition: number;
+      toPosition: number;
+      diceValue: number;
+    },
+  ): Promise<void> {
+    await this.prisma.session.update({
+      where: { id: sessionId },
+      data: {
+        status: 'QUIZ_PENDING',
+        pendingQuizQuestionId: data.questionId,
+        pendingQuizAttackerId: data.attackerId,
+        pendingQuizDefenderId: data.defenderId,
+        pendingQuizFigureId: data.figureId,
+        pendingQuizFromPos: data.fromPosition,
+        pendingQuizToPos: data.toPosition,
+        pendingQuizDiceValue: data.diceValue,
+        updatedAt: new Date(),
+      },
+    });
+  }
+
+  async clearPendingQuiz(sessionId: string): Promise<void> {
+    await this.prisma.session.update({
+      where: { id: sessionId },
+      data: {
+        status: 'IN_PROGRESS',
+        pendingQuizQuestionId: null,
+        pendingQuizAttackerId: null,
+        pendingQuizDefenderId: null,
+        pendingQuizFigureId: null,
+        pendingQuizFromPos: null,
+        pendingQuizToPos: null,
+        pendingQuizDiceValue: null,
+        updatedAt: new Date(),
+      },
+    });
   }
 }

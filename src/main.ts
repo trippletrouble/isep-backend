@@ -7,8 +7,12 @@ import { ValidationPipe } from '@nestjs/common';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  if (process.env.NODE_ENV !== 'production') {
+    process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+  }
+
   app.enableCors({
-    origin: ['http://localhost:5173', 'http://192.168.64.148'],
+    origin: ['http://localhost:5173', 'http://localhost:3002', 'http://192.168.64.148'],
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,

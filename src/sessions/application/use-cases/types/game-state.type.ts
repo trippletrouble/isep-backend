@@ -21,6 +21,7 @@ export type GameStateType = {
   diceRolledThisTurn: boolean;
   consecutiveSixes: number;
   activeRules: AdditionalRule[];
+  activeFlyCount: number;
   winnerId: string | null;
   activeQuiz?: ActiveQuizType | null;
   createdAt: string;

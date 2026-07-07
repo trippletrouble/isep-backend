@@ -1,6 +1,7 @@
 import { MoveFigureRequestDto } from '../../../dtos';
 import { Inject, Injectable, Optional } from '@nestjs/common';
-import { SessionRepositoryPort } from '../../../../ports';
+import { SessionRepositoryPort, QuizServicePort } from '../../../../ports';
+import { SubmitQuizAnswerUseCase } from './submit-quiz-answer.use-case';
 import { PossibleMoveCalculatorUseCase } from './possible-move-calculator.use-case';
 import {
   LudoEngine,
@@ -14,21 +15,30 @@ import {
   InvalidSessionStatusError,
   NotYourTurnError,
   SessionNotFoundError,
+  QuizInProgressError,
 } from '../../errors';
 import { MoveFigureResultType } from '../../types';
 import { SessionEventsService } from '../../../services';
 import { MoveOutcomeType } from '@common';
+import { FlyDomainService } from '../../../../domain';
+import { FlyDebuffCacheService } from '../../../services';
 
 @Injectable()
 export class MoveFigureUseCase {
   constructor(
     @Inject(SessionRepositoryPort)
     private readonly sessionRepository: SessionRepositoryPort,
+    @Inject(QuizServicePort)
+    private readonly quizClient: QuizServicePort,
     private readonly cache: GameStateCacheService,
     private readonly ludoEngine: LudoEngine,
     private readonly possibleMoveCalculator: PossibleMoveCalculatorUseCase,
+    private readonly flyDomainService: FlyDomainService,
+    private readonly flyDebuffCache: FlyDebuffCacheService,
     @Optional()
     private readonly sessionEvents?: SessionEventsService,
+    @Optional()
+    private readonly submitQuizAnswerUseCase?: SubmitQuizAnswerUseCase,
   ) {}
 
   async execute(
@@ -39,6 +49,11 @@ export class MoveFigureUseCase {
     const gameState = await this.sessionRepository.findGameStateById(sessionId);
     if (!gameState) {
       throw new SessionNotFoundError();
+    }
+    const quizDuellActive = gameState.activeRules.includes('QUIZ_DUELL');
+
+    if (quizDuellActive && gameState.status === 'QUIZ_PENDING') {
+      throw new QuizInProgressError();
     }
 
     if (gameState.status !== 'IN_PROGRESS') {
@@ -53,11 +68,15 @@ export class MoveFigureUseCase {
       throw new DiceNotRolledError();
     }
 
+    const flyDebuffMap = await this.flyDebuffCache.get(sessionId);
+
     const possibleMoves = this.possibleMoveCalculator.calculate(
       gameState,
       userId,
       gameState.lastDiceValue,
+      flyDebuffMap,
     );
+
     const selectedMove = possibleMoves.find(
       (move) =>
         move.figureId === request.figureId &&
@@ -68,18 +87,97 @@ export class MoveFigureUseCase {
       throw new InvalidMoveError();
     }
 
-    let result: MoveResult;
-    try {
-      result = this.ludoEngine.applyMove(
-        gameState,
-        request.figureId,
-        gameState.lastDiceValue,
+    let capturedFigureId: number | null = null;
+    if (selectedMove.capturesOpponent) {
+      const oppFigure = gameState.figures.find(
+        (f) => f.playerId !== userId && f.position === selectedMove.toPosition,
       );
-    } catch {
-      throw new InvalidMoveError();
+      if (oppFigure) capturedFigureId = oppFigure.id;
     }
-    if (result.toPosition !== request.toPosition) {
-      throw new InvalidMoveError();
+
+    let outcome: MoveOutcomeType = 'MOVED';
+    if (selectedMove.capturesOpponent) {
+      outcome = 'CAPTURED';
+    } else if (isFinalGoalPosition(selectedMove.toPosition)) {
+      const ownFigures = gameState.figures.filter((f) => f.playerId === userId);
+      const allInGoal = ownFigures.every((f) =>
+        f.id === request.figureId ? true : isFinalGoalPosition(f.position),
+      );
+      outcome = allInGoal ? 'GAME_WON' : 'GOAL';
+    }
+
+    const rollAgain =
+      outcome !== 'GAME_WON' &&
+      (selectedMove.capturesOpponent ||
+        (gameState.lastDiceValue === 6 &&
+          gameState.activeRules.includes('THROW_AGAIN_ON_6')));
+
+    const result: MoveResult = {
+      figureId: selectedMove.figureId,
+      fromPosition: selectedMove.fromPosition,
+      toPosition: selectedMove.toPosition,
+      outcome,
+      capturedFigureId,
+      rollAgain,
+      turnForfeit: false,
+    };
+
+    // [Main] Quiz-Flow bei Capture
+
+    if (quizDuellActive) {
+      if (result.capturedFigureId !== null) {
+        const question = await this.quizClient.getRandomQuestion();
+        if (!question) {
+          throw new Error('Failed to fetch quiz question');
+        }
+        const defenderFigure = gameState.figures.find(
+          (f) => f.id === result.capturedFigureId,
+        );
+        if (!defenderFigure) {
+          throw new Error('Defender figure not found');
+        }
+        const defenderId = defenderFigure.playerId;
+        await this.sessionRepository.setPendingQuiz(sessionId, {
+          questionId: question.id,
+          attackerId: userId,
+          defenderId,
+          figureId: result.figureId,
+          fromPosition: result.fromPosition,
+          toPosition: result.toPosition,
+          diceValue: gameState.lastDiceValue,
+        });
+        this.submitQuizAnswerUseCase?.startQuizTimer(sessionId);
+        const updatedGameState =
+          await this.sessionRepository.findGameStateById(sessionId);
+        if (!updatedGameState) {
+          throw new SessionNotFoundError();
+        }
+        this.cache.set(sessionId, updatedGameState).catch(() => {});
+        this.sessionEvents?.emit(sessionId, 'quiz_started', {
+          questionId: question.id,
+          question: question.question,
+          answers: question.answerOptions,
+          attackerId: userId,
+          defenderId,
+          figureId: result.figureId,
+          fromPosition: result.fromPosition,
+          toPosition: result.toPosition,
+          category: question.category,
+          timeLimitSeconds: question.timeLimitSeconds,
+        });
+        this.sessionEvents?.emit(sessionId, 'game_state', updatedGameState);
+        return {
+          ...result,
+          outcome: 'QUIZ_STARTED',
+          plagueFlyTransferred: false,
+          gameState: updatedGameState,
+          quiz: {
+            questionId: question.id,
+            question: question.question,
+            answers: question.answerOptions,
+          },
+        };
+      }
     }
 
     await this.sessionRepository.applyMove({
@@ -95,12 +193,81 @@ export class MoveFigureUseCase {
       turnForfeit: result.turnForfeit,
     });
 
+    await this.flyDebuffCache.invalidate(sessionId);
+
+    let plagueFlyTransferred = false;
+
+    if (
+      gameState.activeRules.includes('PLAGUE_FLY') &&
+      result.capturedFigureId !== null
+    ) {
+      const attackerFigure = gameState.figures.find(
+        (f) => f.id === result.figureId,
+      )!;
+      const victimFigure = gameState.figures.find(
+        (f) => f.id === result.capturedFigureId,
+      )!;
+      const kickResult = await this.flyDomainService.resolveKick(
+        sessionId,
+        String(attackerFigure.id),
+        String(victimFigure.id),
+      );
+
+      if (kickResult.bothFliesRemoved) {
+        await this.sessionRepository.setFigureHasPlagueFly(
+          sessionId,
+          attackerFigure.id,
+          false,
+        );
+        await this.sessionRepository.setFigureHasPlagueFly(
+          sessionId,
+          victimFigure.id,
+          false,
+        );
+      } else if (kickResult.flyTransferred) {
+        await this.sessionRepository.setFigureHasPlagueFly(
+          sessionId,
+          victimFigure.id,
+          false,
+        );
+        await this.sessionRepository.setFigureHasPlagueFly(
+          sessionId,
+          attackerFigure.id,
+          true,
+        );
+        plagueFlyTransferred = true;
+      } else if (kickResult.attackerFlyRemoved) {
+        await this.sessionRepository.setFigureHasPlagueFly(
+          sessionId,
+          attackerFigure.id,
+          false,
+        );
+      }
+    }
+
+    if (
+      gameState.activeRules.includes('PLAGUE_FLY') &&
+      isFinalGoalPosition(result.toPosition)
+    ) {
+      const movingFigure = gameState.figures.find(
+        (f) => f.id === result.figureId,
+      );
+      if (movingFigure?.hasPlagueFly) {
+        await this.flyDomainService.handleReachGoal(
+          sessionId,
+          String(result.figureId),
+        );
+        await this.sessionRepository.setFigureHasPlagueFly(
+          sessionId,
+          result.figureId,
+          false,
+        );
+      }
+    }
+
     const updatedGameState =
       await this.sessionRepository.findGameStateById(sessionId);
-
-    if (!updatedGameState) {
-      throw new SessionNotFoundError();
-    }
+    if (!updatedGameState) throw new SessionNotFoundError();
 
     this.cache.set(sessionId, updatedGameState).catch(() => {});
 
@@ -111,7 +278,22 @@ export class MoveFigureUseCase {
       toPosition: result.toPosition,
     });
 
-    // Alle Clients mit vollem GameState versorgen — Figurenpositionen, diceRolledThisTurn etc.
+    if (plagueFlyTransferred && result.capturedFigureId !== null) {
+      const attackerFigure = gameState.figures.find(
+        (f) => f.id === result.figureId,
+      )!;
+      const victimFigure = gameState.figures.find(
+        (f) => f.id === result.capturedFigureId,
+      )!;
+      this.sessionEvents?.emit(sessionId, 'plague_fly_transferred', {
+        fromFigureId: victimFigure.id,
+        toFigureId: attackerFigure.id,
+        fromPlayerId: victimFigure.playerId,
+        toPlayerId: attackerFigure.playerId,
+        activeFlyCount: updatedGameState.activeFlyCount,
+      });
+    }
+
     this.sessionEvents?.emit(sessionId, 'game_state', updatedGameState);
 
     if (
@@ -139,6 +321,7 @@ export class MoveFigureUseCase {
       capturedFigureId: result.capturedFigureId,
       rollAgain: result.rollAgain,
       turnForfeit: result.turnForfeit,
+      plagueFlyTransferred,
       gameState: updatedGameState,
     };
   }
@@ -149,19 +332,15 @@ export class MoveFigureUseCase {
     toPosition: number,
     capturesOpponent: boolean,
   ): MoveOutcomeType {
-    if (capturesOpponent) {
-      return 'CAPTURED';
-    }
+    if (capturesOpponent) return 'CAPTURED';
     if (isFinalGoalPosition(toPosition)) {
       const allFiguresInGoal = ownFigures.every((figure) =>
         figure.id !== movedFigureId
           ? isFinalGoalPosition(figure.position) || figure.status === 'GOAL'
           : true,
       );
-
       return allFiguresInGoal ? 'GAME_WON' : 'GOAL';
     }
-
     return 'MOVED';
   }
 }

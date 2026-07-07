@@ -63,6 +63,13 @@ model Session {
   diceRolledThisTurn   Boolean          @default(false) @map("dice_rolled_this_turn")
   consecutiveSixes     Int              @default(0) @map("consecutive_sixes")
   winnerId             String?          @map("winner_id") @db.Uuid
+  pendingQuizQuestionId String?         @map("pending_quiz_question_id")
+  pendingQuizAttackerId String?          @map("pending_quiz_attacker_id") @db.Uuid
+  pendingQuizDefenderId String?          @map("pending_quiz_defender_id") @db.Uuid
+  pendingQuizFigureId   Int?             @map("pending_quiz_figure_id")
+  pendingQuizFromPos    Int?             @map("pending_quiz_from_pos")
+  pendingQuizToPos      Int?             @map("pending_quiz_to_pos")
+  pendingQuizDiceValue  Int?             @map("pending_quiz_dice_value")
   replayLogRef         String?          @map("replay_log_ref")
   startedAt            DateTime?        @map("started_at")
   finishedAt           DateTime?        @map("finished_at")
@@ -117,6 +124,8 @@ model Figure {
   participantId String      @map("participant_id") @db.Uuid
   position      Int         @default(-1)
   status        PieceStatus @default(HOME)
+  hasPlagueFly  Boolean     @default(false) @map("has_plague_fly")
+  flyDebuffCount Int        @default(0)     @map("fly_debuff_count")
   updatedAt     DateTime    @updatedAt @map("updated_at")
 
   session     Session         @relation(fields: [sessionId], references: [id], onDelete: Cascade)
@@ -184,6 +193,8 @@ enum BoardTheme {
 enum AdditionalRule {
   THROW_AGAIN_ON_6
   THREE_SIXES_LOSE_TURN
+  PLAGUE_FLY
+  QUIZ_DUELL
 }
 
 enum MoveOutcome {
@@ -191,6 +202,7 @@ enum MoveOutcome {
   CAPTURED
   GOAL
   GAME_WON
+  QUIZ_STARTED
 }
 
 enum GameHistoryActionType {

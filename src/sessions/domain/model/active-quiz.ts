@@ -1,4 +1,4 @@
-export type ActiveQuizType = {
+export class ActiveQuizType {
   id: string;
   questionId: string;
   attackerId: string;
@@ -13,4 +13,4 @@ export type ActiveQuizType = {
   pendingToPos: number;
   diceValue: number;
   createdAt: string;
-};
+}

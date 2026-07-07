@@ -47,6 +47,8 @@ import {
   GameHistoryEventDto,
   LobbyDto,
   LobbySettingsDto,
+  SubmitQuizAnswerUseCase,
+  SubmitQuizAnswerRequestDto,
   DiceAlreadyRolledError,
   DiceNotRolledError,
   InvalidSessionStatusError,
@@ -61,11 +63,16 @@ import {
   OnlyHostCanInviteError,
   InviteTokenExpiredError,
   ParticipantNotFoundError,
+  QuizInProgressError,
+  NotInQuizError,
+  NotQuizParticipantError,
+  AlreadyAnsweredError,
   GameStateType,
   DiceRollResultType,
   RollDiceRequestType,
   PossibleMovesResultType,
   MoveFigureResultType,
+  SubmitQuizAnswerResult,
 } from '../../application';
 import { SessionGuard, CurrentUser } from '../../../auth';
 import { User } from '$gen/prisma-class/user';
@@ -93,6 +100,7 @@ export class SessionsController {
     private readonly generateInviteUseCase: GenerateInviteUseCase,
     private readonly getResultsUseCase: GetResultsUseCase,
     private readonly getHistoryUseCase: GetHistoryUseCase,
+    private readonly submitQuizAnswerUseCase: SubmitQuizAnswerUseCase,
   ) {}
 
   @Sse(':id/updates')
@@ -293,6 +301,13 @@ export class SessionsController {
         });
       }
 
+      if (error instanceof QuizInProgressError) {
+        throw new ConflictException({
+          code: 'QUIZ_IN_PROGRESS',
+          message: error.message,
+        });
+      }
+
       throw error;
     }
   }
@@ -382,8 +397,31 @@ export class SessionsController {
         });
       }
 
+      if (error instanceof QuizInProgressError) {
+        throw new ConflictException({
+          code: 'QUIZ_IN_PROGRESS',
+          message: error.message,
+        });
+      }
+
       throw error;
     }
+  }
+
+  @Post(':id/cheat-roll')
+  @HttpCode(200)
+  async cheatRoll(
+    @Param('id') sessionId: string,
+    @Body() body: { values: number[] },
+  ) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new ForbiddenException();
+    }
+    if (!(global as any).cheatRolls) {
+      (global as any).cheatRolls = {};
+    }
+    (global as any).cheatRolls[sessionId] = body.values;
+    return { success: true, queued: body.values };
   }
 
   @Post()
@@ -640,6 +678,53 @@ export class SessionsController {
       if (error instanceof InvalidSessionStatusError) {
         throw new ConflictException({
           code: 'INVALID_SESSION_STATUS',
+          message: error.message,
+        });
+      }
+      throw error;
+    }
+  }
+
+  @Post(':id/quiz-answer')
+  @HttpCode(200)
+  @UseGuards(SessionGuard)
+  async submitQuizAnswer(
+    @Param('id') sessionId: string,
+    @Body() body: SubmitQuizAnswerRequestDto,
+    @CurrentUser() user: User,
+  ): Promise<SubmitQuizAnswerResult> {
+    try {
+      const result = await this.submitQuizAnswerUseCase.execute(
+        sessionId,
+        user.id,
+        body.answerId,
+      );
+      if (result.resolved) {
+        await this.sseService.emitState(sessionId);
+      }
+      return result;
+    } catch (error) {
+      if (error instanceof SessionNotFoundError) {
+        throw new NotFoundException({
+          code: 'SESSION_NOT_FOUND',
+          message: error.message,
+        });
+      }
+      if (error instanceof NotInQuizError) {
+        throw new ConflictException({
+          code: 'NOT_IN_QUIZ',
+          message: error.message,
+        });
+      }
+      if (error instanceof NotQuizParticipantError) {
+        throw new ForbiddenException({
+          code: 'FORBIDDEN',
+          message: error.message,
+        });
+      }
+      if (error instanceof AlreadyAnsweredError) {
+        throw new ConflictException({
+          code: 'ALREADY_ANSWERED',
           message: error.message,
         });
       }
