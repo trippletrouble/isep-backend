@@ -86,10 +86,18 @@ export class RollDiceUseCase {
           );
           flyDebuffMap.delete(figure.id);
         } else {
-          await this.sessionRepository.incrementFlyDebuffCount(
+          const updatedCount = await this.sessionRepository.incrementFlyDebuffCount(
             sessionId,
             figure.id,
           );
+          if (updatedCount >= 3) {
+            await this.sessionRepository.setFigureHasPlagueFly(
+              sessionId,
+              figure.id,
+              false,
+            );
+            flyDebuffMap.delete(figure.id);
+          }
         }
       }
 

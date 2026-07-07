@@ -737,7 +737,7 @@ export class PrismaSessionRepository implements SessionRepositoryPort {
   ): Promise<void> {
     await this.prisma.figure.update({
       where: { sessionId_id: { sessionId, id: figureId } },
-      data: { hasPlagueFly: value, flyDebuffCount: value ? 0 : undefined },
+      data: { hasPlagueFly: value, flyDebuffCount: 0 },
     });
   }
 
