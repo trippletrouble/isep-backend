@@ -804,6 +804,32 @@ describe('LudoEngine', () => {
     });
   });
 
+  describe('Plague Fly (flyDebuffMap)', () => {
+    it('should use the debuffed value from flyDebuffMap for possible moves calculation', () => {
+      const pRed = createTestParticipant('red-id', PlayerColor.RED);
+      const fRed1 = createTestFigure(1, 10, PieceStatus.ACTIVE, 'red-id');
+      const fRed2 = createTestFigure(2, 20, PieceStatus.ACTIVE, 'red-id');
+      const session = createTestSession([pRed], [fRed1, fRed2]);
+      session.activeRules = ['PLAGUE_FLY'];
+
+      // Figure 1 is debuffed to 2 (rolled 5 - 3 debuff = 2)
+      // Figure 2 has no debuff (uses raw 5)
+      const flyDebuffMap = new Map<number, number>();
+      flyDebuffMap.set(1, 2);
+
+      const moves = engine.getPossibleMoves(session, 'red-id', 5, flyDebuffMap);
+
+      const moveForFig1 = moves.find(m => m.figureId === 1);
+      const moveForFig2 = moves.find(m => m.figureId === 2);
+
+      expect(moveForFig1).toBeDefined();
+      expect(moveForFig1?.toPosition).toBe(12); // 10 + 2 = 12
+
+      expect(moveForFig2).toBeDefined();
+      expect(moveForFig2?.toPosition).toBe(25); // 20 + 5 = 25
+    });
+  });
+
   describe('Verification of Helpers (sanity check)', () => {
     it('should construct test structures successfully', () => {
       const figure = createTestFigure(1, 0, PieceStatus.ACTIVE, 'user-1');
