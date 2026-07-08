@@ -25,6 +25,7 @@ describe('GetHistoryUseCase', () => {
         sequenceNr: 1,
         sessionId: 'session-1',
         participantId: 'part-1',
+        color: 'RED',
         actionType: 'MOVE',
         diceValue: 4,
         figureId: 1,

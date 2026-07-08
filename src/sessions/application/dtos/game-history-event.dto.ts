@@ -1,6 +1,7 @@
 import {
   GameHistoryActionType,
   MoveOutcome,
+  PlayerColor,
 } from '$gen/prisma-client/enums';
 
 export class GameHistoryEventDto {
@@ -8,6 +9,7 @@ export class GameHistoryEventDto {
   sequenceNr: number;
   sessionId: string;
   participantId: string;
+  color: PlayerColor;
   actionType: GameHistoryActionType;
   diceValue: number | null;
   figureId: number | null;
