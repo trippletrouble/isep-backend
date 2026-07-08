@@ -207,12 +207,13 @@ export class MoveFigureUseCase {
       const victimFigure = gameState.figures.find(
         (f) => f.id === result.capturedFigureId,
       )!;
-      const kickResult = this.flyDomainService.resolveKick(
-        attackerFigure,
-        victimFigure,
+      const kickResult = await this.flyDomainService.resolveKick(
+        sessionId,
+        String(attackerFigure.id),
+        String(victimFigure.id),
       );
 
-      if (kickResult.bothRemoved) {
+      if (kickResult.bothFliesRemoved) {
         await this.sessionRepository.setFigureHasPlagueFly(
           sessionId,
           attackerFigure.id,
@@ -223,7 +224,7 @@ export class MoveFigureUseCase {
           victimFigure.id,
           false,
         );
-      } else if (kickResult.transferToAttacker) {
+      } else if (kickResult.flyTransferred) {
         await this.sessionRepository.setFigureHasPlagueFly(
           sessionId,
           victimFigure.id,
@@ -235,7 +236,7 @@ export class MoveFigureUseCase {
           true,
         );
         plagueFlyTransferred = true;
-      } else if (kickResult.attackerLosesFly) {
+      } else if (kickResult.attackerFlyRemoved) {
         await this.sessionRepository.setFigureHasPlagueFly(
           sessionId,
           attackerFigure.id,
@@ -252,6 +253,10 @@ export class MoveFigureUseCase {
         (f) => f.id === result.figureId,
       );
       if (movingFigure?.hasPlagueFly) {
+        await this.flyDomainService.handleReachGoal(
+          sessionId,
+          String(result.figureId),
+        );
         await this.sessionRepository.setFigureHasPlagueFly(
           sessionId,
           result.figureId,

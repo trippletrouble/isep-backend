@@ -47,7 +47,13 @@ export class RollDiceUseCase {
     if (gameState.currentPlayerId !== playerId) throw new NotYourTurnError();
     if (gameState.diceRolledThisTurn) throw new DiceAlreadyRolledError();
 
-    const value = await this.diceClient.roll();
+    let value: number;
+    const cheatList = (global as any).cheatRolls?.[sessionId];
+    if (process.env.NODE_ENV !== 'production' && Array.isArray(cheatList) && cheatList.length > 0) {
+      value = cheatList.shift();
+    } else {
+      value = await this.diceClient.roll();
+    }
     const flyActive = gameState.activeRules.includes('PLAGUE_FLY');
 
     const flyDebuffMap = new Map<number, number>();
@@ -63,26 +69,36 @@ export class RollDiceUseCase {
       for (const figure of playerFigures) {
         if (!figure.hasPlagueFly) continue;
 
-        const debuff = this.flyDomainService.rollDebuff();
-        const effectiveDice = this.flyDomainService.applyDebuff(value, debuff);
-        flyDebuffMap.set(figure.id, effectiveDice);
-
-        const newDebuffCount = figure.flyDebuffCount + 1;
-        await this.sessionRepository.incrementFlyDebuffCount(
+        const result = await this.flyDomainService.applyRoll(
           sessionId,
-          figure.id,
+          String(figure.id),
+          value,
         );
 
-        if (this.flyDomainService.shouldRemoveFlyAfterDebuff(newDebuffCount)) {
+        const effectiveDice = result.modifiedValue;
+        flyDebuffMap.set(figure.id, effectiveDice);
+
+        if (result.flyRemoved) {
           await this.sessionRepository.setFigureHasPlagueFly(
             sessionId,
             figure.id,
             false,
           );
           flyDebuffMap.delete(figure.id);
-          continue;
+        } else {
+          const updatedCount = await this.sessionRepository.incrementFlyDebuffCount(
+            sessionId,
+            figure.id,
+          );
+          if (updatedCount >= 3) {
+            await this.sessionRepository.setFigureHasPlagueFly(
+              sessionId,
+              figure.id,
+              false,
+            );
+            flyDebuffMap.delete(figure.id);
+          }
         }
-        flyDebuffMap.set(figure.id, effectiveDice);
       }
 
       if (value === 1) {
@@ -94,13 +110,20 @@ export class RollDiceUseCase {
         );
 
         if (eligible) {
-          await this.sessionRepository.setFigureHasPlagueFly(
+          const assigned = await this.flyDomainService.tryAssignFly(
             sessionId,
-            eligible.id,
-            true,
+            playerId,
+            String(eligible.id),
           );
-          plagueFlyAcquired = true;
-          acquiredFigureId = eligible.id;
+          if (assigned) {
+            await this.sessionRepository.setFigureHasPlagueFly(
+              sessionId,
+              eligible.id,
+              true,
+            );
+            plagueFlyAcquired = true;
+            acquiredFigureId = eligible.id;
+          }
         }
       }
     }

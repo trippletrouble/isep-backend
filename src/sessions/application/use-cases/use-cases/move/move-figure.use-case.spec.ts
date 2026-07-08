@@ -49,7 +49,7 @@ describe('MoveFigureUseCase', () => {
     lastDiceValue: 3,
     diceRolledThisTurn: true,
     consecutiveSixes: 0,
-    activeRules: [],
+    activeRules: ['QUIZ_DUELL'],
     activeFlyCount: 0,
     winnerId: null,
     createdAt: '2026-06-15T12:00:00.000Z',
@@ -118,12 +118,25 @@ describe('MoveFigureUseCase', () => {
     } as unknown as jest.Mocked<LudoEngine>;
 
     mockFlyDomainService = {
-      resolveKick: jest.fn(),
+      resolveKick: jest.fn().mockResolvedValue({
+        bothFliesRemoved: false,
+        flyTransferred: false,
+        attackerFlyRemoved: false,
+      }),
+      handleReachGoal: jest.fn().mockResolvedValue({
+        flyRemoved: false,
+      }),
     } as unknown as jest.Mocked<FlyDomainService>;
 
     mockSessionEvents = {
       emit: jest.fn(),
     } as unknown as jest.Mocked<SessionEventsService>;
+
+    const mockFlyDebuffCache = {
+      set: jest.fn().mockResolvedValue(undefined),
+      get: jest.fn().mockResolvedValue(new Map()),
+      invalidate: jest.fn(),
+    } as any;
 
     useCase = new MoveFigureUseCase(
       mockSessionRepo,
@@ -132,6 +145,7 @@ describe('MoveFigureUseCase', () => {
       mockLudoEngine,
       mockMoveCalculator,
       mockFlyDomainService,
+      mockFlyDebuffCache,
       mockSessionEvents,
     );
   });
@@ -295,5 +309,99 @@ describe('MoveFigureUseCase', () => {
     await expect(
       useCase.execute(sessionId, userId, validRequest),
     ).rejects.toThrow(QuizInProgressError);
+  });
+
+  describe('Plague Fly integration', () => {
+    it('should resolve kick and remove both flies when resolveKick returns bothFliesRemoved', async () => {
+      const activeState: GameStateType = {
+        ...mockGameState,
+        activeRules: ['PLAGUE_FLY'],
+        figures: [
+          { id: 1, playerId: userId, position: 0, status: 'ACTIVE', hasPlagueFly: true },
+          { id: 2, playerId: 'opp', position: 3, status: 'ACTIVE', hasPlagueFly: true },
+        ] as any,
+      };
+
+      mockSessionRepo.findGameStateById
+        .mockResolvedValueOnce(activeState)
+        .mockResolvedValueOnce(updatedGameState);
+
+      mockMoveCalculator.calculate.mockReturnValueOnce([
+        { figureId: 1, fromPosition: 0, toPosition: 3, capturesOpponent: true },
+      ]);
+
+      mockFlyDomainService.resolveKick.mockResolvedValueOnce({
+        bothFliesRemoved: true,
+        flyTransferred: false,
+        attackerFlyRemoved: false,
+      });
+
+      mockSessionRepo.setFigureHasPlagueFly = jest.fn().mockResolvedValue(undefined);
+
+      await useCase.execute(sessionId, userId, validRequest);
+
+      expect(mockFlyDomainService.resolveKick).toHaveBeenCalledWith(sessionId, '1', '2');
+      expect(mockSessionRepo.setFigureHasPlagueFly).toHaveBeenCalledWith(sessionId, 1, false);
+      expect(mockSessionRepo.setFigureHasPlagueFly).toHaveBeenCalledWith(sessionId, 2, false);
+    });
+
+    it('should resolve kick and transfer fly when resolveKick returns flyTransferred', async () => {
+      const activeState: GameStateType = {
+        ...mockGameState,
+        activeRules: ['PLAGUE_FLY'],
+        figures: [
+          { id: 1, playerId: userId, position: 0, status: 'ACTIVE', hasPlagueFly: false },
+          { id: 2, playerId: 'opp', position: 3, status: 'ACTIVE', hasPlagueFly: true },
+        ] as any,
+      };
+
+      mockSessionRepo.findGameStateById
+        .mockResolvedValueOnce(activeState)
+        .mockResolvedValueOnce(updatedGameState);
+
+      mockMoveCalculator.calculate.mockReturnValueOnce([
+        { figureId: 1, fromPosition: 0, toPosition: 3, capturesOpponent: true },
+      ]);
+
+      mockFlyDomainService.resolveKick.mockResolvedValueOnce({
+        bothFliesRemoved: false,
+        flyTransferred: true,
+        attackerFlyRemoved: false,
+      });
+
+      mockSessionRepo.setFigureHasPlagueFly = jest.fn().mockResolvedValue(undefined);
+
+      await useCase.execute(sessionId, userId, validRequest);
+
+      expect(mockFlyDomainService.resolveKick).toHaveBeenCalledWith(sessionId, '1', '2');
+      expect(mockSessionRepo.setFigureHasPlagueFly).toHaveBeenCalledWith(sessionId, 2, false);
+      expect(mockSessionRepo.setFigureHasPlagueFly).toHaveBeenCalledWith(sessionId, 1, true);
+    });
+
+    it('should remove fly when figure reaches the goal', async () => {
+      const activeState: GameStateType = {
+        ...mockGameState,
+        activeRules: ['PLAGUE_FLY'],
+        figures: [
+          { id: 1, playerId: userId, position: 55, status: 'ACTIVE', hasPlagueFly: true },
+        ] as any,
+      };
+
+      mockSessionRepo.findGameStateById
+        .mockResolvedValueOnce(activeState)
+        .mockResolvedValueOnce(updatedGameState);
+
+      mockMoveCalculator.calculate.mockReturnValueOnce([
+        { figureId: 1, fromPosition: 55, toPosition: 72, capturesOpponent: false },
+      ]);
+
+      mockFlyDomainService.handleReachGoal.mockResolvedValueOnce({ flyRemoved: true });
+      mockSessionRepo.setFigureHasPlagueFly = jest.fn().mockResolvedValue(undefined);
+
+      await useCase.execute(sessionId, userId, { figureId: 1, toPosition: 72 });
+
+      expect(mockFlyDomainService.handleReachGoal).toHaveBeenCalledWith(sessionId, '1');
+      expect(mockSessionRepo.setFigureHasPlagueFly).toHaveBeenCalledWith(sessionId, 1, false);
+    });
   });
 });

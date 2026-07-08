@@ -52,6 +52,13 @@ export class HttpQuizServiceAdapter extends QuizServicePort {
       return null;
     }
 
+    const timeLimitSeconds =
+      typeof obj.timeLimitSeconds === 'number' &&
+      Number.isFinite(obj.timeLimitSeconds) &&
+      obj.timeLimitSeconds > 0
+        ? obj.timeLimitSeconds
+        : 15;
+
     const mappedOptions: QuizQuestion['answerOptions'] = [];
 
     for (const option of obj.answerOptions) {
@@ -84,8 +91,7 @@ export class HttpQuizServiceAdapter extends QuizServicePort {
       question: obj.question,
       answerOptions: mappedOptions,
       correctAnswerId: obj.correctAnswerId,
-      timeLimitSeconds:
-        typeof obj.timeLimitSeconds === 'number' ? obj.timeLimitSeconds : 15,
+      timeLimitSeconds,
     };
   }
 

@@ -8,6 +8,7 @@ import {
   SessionNotFoundError,
 } from '../../errors';
 import { PossibleMovesResultType } from '../../types';
+import { FlyDebuffCacheService } from '../../../services';
 
 @Injectable()
 export class GetPossibleMovesUseCase {
@@ -15,6 +16,7 @@ export class GetPossibleMovesUseCase {
     @Inject(SessionRepositoryPort)
     private readonly sessionRepository: SessionRepositoryPort,
     private readonly ludoEngine: LudoEngine,
+    private readonly flyDebuffCache: FlyDebuffCacheService,
   ) {}
 
   async execute(
@@ -39,12 +41,15 @@ export class GetPossibleMovesUseCase {
       throw new DiceNotRolledError();
     }
 
+    const flyDebuffMap = await this.flyDebuffCache.get(sessionId);
+
     return {
       diceValue: gameState.lastDiceValue,
       possibleMoves: this.ludoEngine.getPossibleMoves(
         gameState,
         playerId,
         gameState.lastDiceValue,
+        flyDebuffMap,
       ),
     };
   }

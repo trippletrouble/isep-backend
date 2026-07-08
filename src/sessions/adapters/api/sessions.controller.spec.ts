@@ -17,6 +17,7 @@ import {
   GetPossibleMovesUseCase,
   GetLobbyUseCase,
   UpdateLobbySettingsUseCase,
+  SubmitQuizAnswerUseCase,
 } from '../../application';
 import { GetGameStateUseCase } from '../../application';
 import { RollDiceUseCase } from '../../application';
@@ -65,6 +66,7 @@ describe('SessionsController', () => {
         { provide: GetHistoryUseCase, useValue: mockGetHistoryUseCase },
         { provide: AuthService, useValue: {} },
         { provide: SessionSseService, useValue: { emitState: jest.fn().mockResolvedValue(undefined) } },
+        { provide: SubmitQuizAnswerUseCase, useValue: {} },
       ],
     }).compile();
 

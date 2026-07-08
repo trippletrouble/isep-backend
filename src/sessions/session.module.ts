@@ -120,4 +120,4 @@ import { SessionSseService } from './session-sse.service';
     SubmitQuizAnswerUseCase,
   ],
 })
-export class SessionModule {}
+export class SessionModule { }
