@@ -58,6 +58,7 @@ describe('GetSessionPlayersUseCase', () => {
           figuresCaptured: 0,
           joinedAt: mockDate,
           updatedAt: mockDate,
+          user: { username: 'user-1' },
         },
         {
           id: 'participant-2',
@@ -73,6 +74,7 @@ describe('GetSessionPlayersUseCase', () => {
           figuresCaptured: 2,
           joinedAt: mockDate,
           updatedAt: mockDate,
+          user: { username: 'user-2' },
         },
       ],
     };

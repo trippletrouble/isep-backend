@@ -383,6 +383,30 @@ export class PrismaSessionRepository implements SessionRepositoryPort {
             updatedAt: new Date(),
           },
         });
+
+        await tx.gameParticipant.update({
+          where: { id: movingFigure.participantId },
+          data: { placement: 1 },
+        });
+
+        const remainingParticipants = await tx.gameParticipant.findMany({
+          where: {
+            sessionId: data.sessionId,
+            id: { not: movingFigure.participantId },
+          },
+          orderBy: [
+            { figuresInGoal: 'desc' },
+            { figuresCaptured: 'desc' },
+          ],
+        });
+
+        for (let i = 0; i < remainingParticipants.length; i++) {
+          await tx.gameParticipant.update({
+            where: { id: remainingParticipants[i].id },
+            data: { placement: i + 2 },
+          });
+        }
+
         return;
       }
 
@@ -571,10 +595,16 @@ export class PrismaSessionRepository implements SessionRepositoryPort {
     const events = await this.prisma.gameHistoryEvent.findMany({
       where: { sessionId },
       orderBy: { sequenceNr: 'asc' },
+      include: {
+        participant: {
+          select: { color: true },
+        },
+      },
     });
 
-    return events.map((e) => ({
+    return events.map(({ participant, ...e }) => ({
       ...e,
+      color: participant.color,
       createdAt: e.createdAt.toISOString(),
     }));
   }

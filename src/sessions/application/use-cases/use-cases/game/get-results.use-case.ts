@@ -21,6 +21,7 @@ export class GetResultsUseCase {
       .map((p) => ({
         placement: p.placement!,
         userId: p.userId,
+        username: p.user.username,
         color: p.color,
         figuresInGoal: p.figuresInGoal,
         figuresCaptured: p.figuresCaptured,

@@ -49,6 +49,7 @@ describe('GetResultsUseCase', () => {
           color: PlayerColor.BLUE,
           figuresInGoal: 3,
           figuresCaptured: 1,
+          user: { username: 'user-2-name' },
         },
         {
           userId: 'user-3',
@@ -56,6 +57,7 @@ describe('GetResultsUseCase', () => {
           color: PlayerColor.GREEN,
           figuresInGoal: 1,
           figuresCaptured: 0,
+          user: { username: 'user-3-name' },
         },
         {
           userId: 'user-1',
@@ -63,6 +65,7 @@ describe('GetResultsUseCase', () => {
           color: PlayerColor.RED,
           figuresInGoal: 4,
           figuresCaptured: 5,
+          user: { username: 'user-1-name' },
         },
       ],
     } as unknown as SessionWithParticipants;
@@ -75,6 +78,7 @@ describe('GetResultsUseCase', () => {
     expect(result[0]).toEqual({
       placement: 1,
       userId: 'user-1',
+      username: 'user-1-name',
       color: PlayerColor.RED,
       figuresInGoal: 4,
       figuresCaptured: 5,
@@ -82,6 +86,7 @@ describe('GetResultsUseCase', () => {
     expect(result[1]).toEqual({
       placement: 2,
       userId: 'user-2',
+      username: 'user-2-name',
       color: PlayerColor.BLUE,
       figuresInGoal: 3,
       figuresCaptured: 1,
